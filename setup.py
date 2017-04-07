@@ -5,7 +5,7 @@ setup(
     version='0.0.1.dev0',
     description='Applications of likelihoodfree to different problems',
     url='https://github.com/mackelab/likelihoodfree-applications',
-    install_requires=['allensdk', 'likelihoodfree'],
+    install_requires=['allensdk', 'likelihoodfree', 'visdom'],
     extras_require={
         'dev': ['check-manifest'],
         'test': ['coverage'],
