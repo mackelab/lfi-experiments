@@ -26,10 +26,10 @@ from visdom import Visdom
 def run(model, env, debug):
     """Plotting
 
-    Call `plots.py` together with a string indicating 
+    Call `vis.py` together with a string indicating 
     the model.
     
-    See `plots.py --help` for info on parameters.
+    See `vis.py --help` for info on parameters.
     """
     block = False
     
