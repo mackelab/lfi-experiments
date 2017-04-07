@@ -16,11 +16,11 @@ class MoGSimulator(SimulatorBase):
 
         Parameters
         ----------
-        bimodal : bool (default: False)
+        bimodal : bool
             If True, will add a second mode
-        dim : int (default: 1)
+        dim : int
             Dimensionality of the data as well as of theta
-        seed : int or None (default: None)
+        seed : int or None
             If set, randomness across runs is disabled
 
         Attributes
@@ -68,7 +68,7 @@ class MoGSimulator(SimulatorBase):
         Parameters
         ----------
         theta : dim theta, 
-        n_samples : int (default: 1)
+        n_samples : int
 
         Returns
         -------
