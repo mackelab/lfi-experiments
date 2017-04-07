@@ -15,7 +15,7 @@ from likelihoodfree.Inference import Inference
 
 @click.command()
 @click.argument('prefix', type=str)
-@click.argument('sim', type=click.Choice(['mog', 'hh']))
+@click.argument('model', type=click.Choice(['mog', 'hh']))
 @click.option('--debug/--no-debug', default=False, is_flag=True, 
               help='If True, will enter debugger on error')
 @click.option('--device', default='cpu', 
@@ -35,25 +35,29 @@ from likelihoodfree.Inference import Inference
 @click.option('--val', default=0, 
               help='Number of samples for validation')
 
-def run(prefix, debug, device, iw_loss, minibatch, numerical_fix, 
-        pdb_iter, seed, sim, svi, val):
-    """See `run.py --help` for info on parameters."""
-
+def run(prefix, model, debug, device, iw_loss, minibatch, numerical_fix, 
+        pdb_iter, seed, svi, val):
+    """Run model
+    
+    Call `run.py` together with a prefix and a model to run.
+    
+    See `run.py --help` for info on parameters.
+    """
     # set env variables
     os.environ["THEANO_FLAGS"] = "device=" + device + ",floatX=float32,lib.cnmem=0.8"
 
     # check for subfolders, create if they don't exist
     dirs = {}
-    dirs['dir_data'] = 'results/'+sim+'/data/'
-    dirs['dir_nets'] = 'results/'+sim+'/nets/'
-    dirs['dir_plots'] = 'results/'+sim+'/plots/'
+    dirs['dir_data'] = 'results/'+model+'/data/'
+    dirs['dir_nets'] = 'results/'+model+'/nets/'
+    dirs['dir_plots'] = 'results/'+model+'/plots/'
     for k, v in dirs.items():
         if not os.path.exists(v):
             os.makedirs(v)
 
     try:
         # simulator
-        if sim == 'mog':
+        if model == 'mog':
             sim = MoGSimulator(seed=seed)
         else:
             raise ValueError('sim not implemented')

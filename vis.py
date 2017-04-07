@@ -75,7 +75,18 @@ def run(model, env, debug):
             options = {}
             options['title'] = '{} : info'.format(basename)
             vlt.text(infotext, opts=options, env=env_)
-
+            
+            """
+            # plt.gcf() to jpeg
+            fig = plt.gcf()
+            fig.canvas.draw()
+            data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            options = {}
+            options['title'] = ''
+            options['jpgquality'] = 100
+            vlt.image(data, opts=options, env=env_)
+            """
     except:
         t, v, tb = sys.exc_info()
         if debug:
