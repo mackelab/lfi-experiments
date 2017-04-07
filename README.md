@@ -8,6 +8,12 @@
   since it's linked symbolically
 
 
+## Usage
+
+- Launch simulations using `run.py`, see `run.py --help` for options
+- In addition, examples are provided in `notebooks` folder
+
+
 ## Notes
 
 - Make sure to have the `likelihoodfree` installed as a package, see https://github.com/mackelab/likelihoodfree
