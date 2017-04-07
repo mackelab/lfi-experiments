@@ -56,18 +56,18 @@ class MoGSimulator(SimulatorBase):
     @lazyprop
     def prior(self):
         return pdf.Uniform(lower=self.prior_min, upper=self.prior_max,
-                           seed=self.get_seed())
+                           seed=self.gen_newseed())
 
     @staticmethod
     def calc_summary_stats(x):
         return x
-
+    
     def forward_model(self, theta, n_samples=1):
         """Given a mean parameter, simulates the likelihood.
 
         Parameters
         ----------
-        theta : 1 x dim theta
+        theta : dim theta, 
         n_samples : int (default: 1)
 
         Returns
@@ -75,19 +75,16 @@ class MoGSimulator(SimulatorBase):
         n_samples x dim data
         """
         theta = np.asarray(theta)
-        assert theta.ndim == 2, 'theta should be a 2d array'
-        assert theta.shape[0] == 1, 'theta.shape[0] should be 1'
-        assert theta.shape[1] == self.dim, 'theta.shape[1] should be dim long'
-
-        sim_seed = self.rng.randint(0, 2**31)
+        assert theta.ndim == 1, 'theta should be a 1d array'
+        assert theta.shape[0] == self.dim, 'theta.shape[0] should be dim long'
 
         # list of n_components len with elements dim, (means)
-        ms = [theta[0,:] for l in range(len(self.ms))]
+        ms = [theta for l in range(len(self.ms))]
 
         # list of n_components len with elements dim, dim (covariances)
         Ss = [self.Ss[i,:,:] for i in range(len(self.Ss))]
 
-        mog = pdf.MoG(self.alphas, ms=ms, Ss=Ss, seed=self.get_seed())
+        mog = pdf.MoG(self.alphas, ms=ms, Ss=Ss, seed=self.gen_newseed())
 
         return mog.gen(n_samples=n_samples)
 
