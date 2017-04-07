@@ -16,8 +16,8 @@ from likelihoodfree.Inference import Inference
 @click.command()
 @click.argument('prefix', type=str)
 @click.argument('sim', type=click.Choice(['mog', 'hh']))
-@click.option('--debug/--no-debug', default=False, 
-              help='If True, will enter debugger on error', is_flag=True)
+@click.option('--debug/--no-debug', default=False, is_flag=True, 
+              help='If True, will enter debugger on error')
 @click.option('--device', default='cpu', 
               help='Device to compute on')
 @click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True, 
