@@ -11,6 +11,7 @@ import six
 import sys
 import time
 
+from ast import literal_eval
 #from lfmods.hh import HHSimulator
 from lfmods.mog import MoGSimulator
 from likelihoodfree.Inference import Inference
@@ -24,21 +25,25 @@ from likelihoodfree.Inference import Inference
               help='Device to compute on')
 @click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True,
               help='Use IW loss?')
-@click.option('--minibatch', default=100,
-              help='Number of samples per minibatch')
 @click.option('--pdb-iter', default=None,
               help='Number of iterations after which to debug')
-@click.option('--rep', default=[2,2],
-              help='List specifying the number of repetitions per n_components model')
+@click.option('--rep', type=str, default='2,2',
+              help='Specify the number of repetitions per n_components model, \
+                    seperation by comma')
 @click.option('--seed', type=int, default=None,
               help='If provided, network and simulation are seeded')
+@click.option('--sim-kwargs', type=str, default=None,
+              help='If provided, will turned into dict and passed as kwargs to simulator')
 @click.option('--svi/--no-svi', default=False, is_flag=True,
               help='Use SVI version?')
+@click.option('--train-kwargs', type=str, default=None,
+              help='If provided, will turned into dict and passed as kwargs to \
+                    inference.train')
 @click.option('--val', default=0,
               help='Number of samples for validation')
 
-def run(prefix, model, debug, device, iw_loss, minibatch,
-        pdb_iter, rep, seed, svi, val):
+def run(prefix, model, debug, device, iw_loss, pdb_iter, rep, sim_kwargs, seed,
+        svi, train_kwargs, val):
     """Run model
 
     Call `run.py` together with a prefix and a model to run.
@@ -57,25 +62,34 @@ def run(prefix, model, debug, device, iw_loss, minibatch,
         if not os.path.exists(v):
             os.makedirs(v)
 
+    # net_kwargs and inference_kwargs to dicts
+    # http://stackoverflow.com/a/9305396
+    def string_to_kwargs(s):
+        if s is None:
+            return {}
+        else:
+            return dict((k, literal_eval(v)) for k, v in (pair.split('=') for pair in s.split()))
+    train_kwargs = string_to_kwargs(train_kwargs)
+    sim_kwargs = string_to_kwargs(sim_kwargs)
+
     try:
         # simulator
         if model == 'mog':
-            dim = 1
-            sim = MoGSimulator(dim=dim, seed=seed)
+            sim = MoGSimulator(seed=seed, **sim_kwargs)
         else:
             raise ValueError('sim not implemented')
 
         # training
         lfi = Inference(prefix=prefix,
-                        sim=sim,
                         seed=seed,
+                        sim=sim,
                         **dirs)
 
         created = False
         iteration = 0
         n_components = 0
 
-        for r in rep:
+        for r in [int(r) for r in rep.split(',')]:
             n_components += 1
             for i in range(r):
                 iteration += 1
@@ -95,7 +109,7 @@ def run(prefix, model, debug, device, iw_loss, minibatch,
                                                 prior_alpha=0.1,
                                                 prior_proposal=approx_posterior)
 
-                lfi.train(net=net, postfix='iter_{}'.format(iteration))
+                lfi.train(net=net, postfix='iter_{}'.format(iteration), **train_kwargs)
 
     except:
         t, v, tb = sys.exc_info()
