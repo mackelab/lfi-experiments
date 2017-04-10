@@ -22,17 +22,16 @@ from visdom import Visdom
 @click.argument('model', type=click.Choice(['mog', 'hh']))
 @click.option('--debug/--no-debug', default=False, is_flag=True, help='If True, will enter debugger on error')
 @click.option('--env', default='main', help='Environment to plot to (main by default)')
-
 def run(model, env, debug):
     """Plotting
 
-    Call `vis.py` together with a string indicating 
+    Call `vis.py` together with a string indicating
     the model.
-    
+
     See `vis.py --help` for info on parameters.
     """
     block = False
-    
+
     dirs = {}
     dirs['dir_nets'] = 'results/'+model+'/nets/'
     dirs['dir_plots'] = 'results/'+model+'/plots/'
@@ -62,7 +61,7 @@ def run(model, env, debug):
     try:
         print('Clearing plots')
         vlt.close(win=None, env=env)
-                
+
         for basename, filepath in zip(basenames, filepaths):
             info = io.load(filepath)
             print('Processing {} ...'.format(filepath))
@@ -70,12 +69,12 @@ def run(model, env, debug):
             fig, ax = viz.loss(info)
             pfig = viz.mpl2plotly(fig)
             viz.send2vis(pfig, vlt)
-             
+
             infotext = viz.info(info, html=True)
             options = {}
             options['title'] = '{} : info'.format(basename)
             vlt.text(infotext, opts=options, env=env_)
-            
+
             """
             # plt.gcf() to jpeg
             fig = plt.gcf()
