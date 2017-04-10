@@ -59,6 +59,8 @@ def export_notebook_to_html(nb, notebook_filename_out):
 @click.command()
 @click.argument('model', type=click.Choice(['mog', 'hh']))
 @click.argument('prefix', type=str)
+@click.option('--autoraise/--no-autoraise', default=True, is_flag=True,
+              help='If True, will raise browser window when ready')
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error')
 @click.option('--nb', type=str, default='viz',
@@ -67,7 +69,7 @@ def export_notebook_to_html(nb, notebook_filename_out):
               help='If True, will try to open HTML notebook')
 @click.option('--postfix', type=str, default=None,
               help='Postfix')
-def run(model, prefix, debug, nb, open, postfix):
+def run(model, prefix, autoraise, debug, nb, open, postfix):
     """Generate notebook and HTML output
 
     Call `nb.py` together with a prefix and a model to run.
@@ -90,7 +92,7 @@ def run(model, prefix, debug, nb, open, postfix):
                          {'prefix': prefix, 'postfix': postfix},
                          run_path='./notebooks/')
         url = 'file://' + os.path.realpath(path_html)
-        webbrowser.open(url, new=True)
+        webbrowser.open(url, autoraise=autoraise, new=True)
     except:
         t, v, tb = sys.exc_info()
         if debug:

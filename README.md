@@ -11,7 +11,16 @@
 ## Usage
 
 - Launch simulations using `run.py`, see `run.py --help` for options
+- Create a notebook with plots after the run is finished, see `python nb.py --help` for options
 - In addition, examples are provided in `notebooks` folder
+
+
+## Example
+
+```bash
+python run.py mog quicktest
+python nb.py mog quicktest
+```
 
 
 ## Notes
