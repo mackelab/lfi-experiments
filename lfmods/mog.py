@@ -69,6 +69,7 @@ class MoGSimulator(SimulatorBase):
         ----------
         theta : dim theta,
         n_samples : int
+            If greater than 1, generate multiple samples given theta.
 
         Returns
         -------
@@ -85,8 +86,9 @@ class MoGSimulator(SimulatorBase):
         Ss = [self.Ss[i,:,:] for i in range(len(self.Ss))]
 
         mog = pdf.MoG(self.alphas, ms=ms, Ss=Ss, seed=self.gen_newseed())
+        samples = mog.gen(n_samples=n_samples)
 
-        return mog.gen(n_samples=n_samples)
+        return samples
 
     def calc_posterior(self):
         """Calculates posterior analytically.

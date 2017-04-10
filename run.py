@@ -3,9 +3,11 @@ from __future__ import division
 from __future__ import print_function
 
 import click
+import likelihoodfree.io as io
 import numpy as np
 import os
 import pdb
+import six
 import sys
 import time
 
@@ -16,31 +18,31 @@ from likelihoodfree.Inference import Inference
 @click.command()
 @click.argument('prefix', type=str)
 @click.argument('model', type=click.Choice(['mog', 'hh']))
-@click.option('--debug/--no-debug', default=False, is_flag=True, 
+@click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error')
-@click.option('--device', default='cpu', 
+@click.option('--device', default='cpu',
               help='Device to compute on')
-@click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True, 
+@click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True,
               help='Use IW loss?')
-@click.option('--minibatch', default=50, 
+@click.option('--minibatch', default=100,
               help='Number of samples per minibatch')
-@click.option('--numerical-fix', default=False, is_flag=True, 
-              help='Reparameterization for stability')
-@click.option('--pdb-iter', default=None, 
+@click.option('--pdb-iter', default=None,
               help='Number of iterations after which to debug')
-@click.option('--seed', type=int, default=None, 
+@click.option('--rep', default=[2,2],
+              help='List specifying the number of repetitions per n_components model')
+@click.option('--seed', type=int, default=None,
               help='If provided, network and simulation are seeded')
-@click.option('--svi/--no-svi', default=False, is_flag=True, 
+@click.option('--svi/--no-svi', default=False, is_flag=True,
               help='Use SVI version?')
-@click.option('--val', default=0, 
+@click.option('--val', default=0,
               help='Number of samples for validation')
 
-def run(prefix, model, debug, device, iw_loss, minibatch, numerical_fix, 
-        pdb_iter, seed, svi, val):
+def run(prefix, model, debug, device, iw_loss, minibatch,
+        pdb_iter, rep, seed, svi, val):
     """Run model
-    
+
     Call `run.py` together with a prefix and a model to run.
-    
+
     See `run.py --help` for info on parameters.
     """
     # set env variables
@@ -58,25 +60,43 @@ def run(prefix, model, debug, device, iw_loss, minibatch, numerical_fix,
     try:
         # simulator
         if model == 'mog':
-            sim = MoGSimulator(seed=seed)
+            dim = 1
+            sim = MoGSimulator(dim=dim, seed=seed)
         else:
             raise ValueError('sim not implemented')
-        
+
         # training
-        lfi = Inference(prefix=prefix, 
+        lfi = Inference(prefix=prefix,
                         sim=sim,
                         seed=seed,
                         **dirs)
-        
-        # first training iteration
-        print('Iteration 1')
-        net, props = lfi.net_create(svi=True)
-        lfi.train(net=net, postfix='iter_1')
 
-        # next training iteration
-        print('Iteration 2')
-        net, props = lfi.net_load(postfix='iter_1')
-        lfi.train(net=net, postfix='iter_2')
+        created = False
+        iteration = 0
+        n_components = 0
+
+        for r in rep:
+            n_components += 1
+            for i in range(r):
+                iteration += 1
+                print('Iteration {}; {} Component(s)'.format(iteration, n_components))
+
+                if not created:
+                    net, props = lfi.net_create(iw_loss=iw_loss,
+                                                n_components=n_components,
+                                                svi=svi)
+                    created = True
+                else:
+                    path_posterior = '{}{}_iter_{}_posterior.pkl'.format(dirs['dir_nets'],
+                        prefix, iteration-1)
+                    approx_posterior = io.load(path_posterior)
+                    net, props = lfi.net_reload(n_components=n_components,
+                                                postfix='iter_{}'.format(iteration-1),
+                                                prior_alpha=0.1,
+                                                prior_proposal=approx_posterior)
+
+                lfi.train(net=net, postfix='iter_{}'.format(iteration))
+
     except:
         t, v, tb = sys.exc_info()
         if debug:
