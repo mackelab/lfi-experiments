@@ -17,15 +17,15 @@ from lfmods.mog import MoGSimulator
 from likelihoodfree.Inference import Inference
 
 @click.command()
-@click.argument('prefix', type=str)
 @click.argument('model', type=click.Choice(['mog', 'hh']))
+@click.argument('prefix', type=str)
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error')
 @click.option('--device', default='cpu',
               help='Device to compute on')
 @click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True,
               help='Use IW loss?')
-@click.option('--pdb-iter', default=None,
+@click.option('--pdb-iter', type=int, default=None,
               help='Number of iterations after which to debug')
 @click.option('--prior-alpha', type=float, default=0.25,
               help='If provided, will use alpha as weight for true prior \
@@ -44,8 +44,7 @@ from likelihoodfree.Inference import Inference
                     inference.train')
 @click.option('--val', default=0,
               help='Number of samples for validation')
-
-def run(prefix, model, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
+def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
         sim_kwargs, seed, svi, train_kwargs, val):
     """Run model
 
