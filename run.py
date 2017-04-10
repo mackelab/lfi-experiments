@@ -27,6 +27,9 @@ from likelihoodfree.Inference import Inference
               help='Use IW loss?')
 @click.option('--pdb-iter', default=None,
               help='Number of iterations after which to debug')
+@click.option('--prior-alpha', type=float, default=0.25,
+              help='If provided, will use alpha as weight for true prior \
+                    in proposal dstribution (only used if `iw_loss` is True)')
 @click.option('--rep', type=str, default='2,2',
               help='Specify the number of repetitions per n_components model, \
                     seperation by comma')
@@ -42,8 +45,8 @@ from likelihoodfree.Inference import Inference
 @click.option('--val', default=0,
               help='Number of samples for validation')
 
-def run(prefix, model, debug, device, iw_loss, pdb_iter, rep, sim_kwargs, seed,
-        svi, train_kwargs, val):
+def run(prefix, model, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
+        sim_kwargs, seed, svi, train_kwargs, val):
     """Run model
 
     Call `run.py` together with a prefix and a model to run.
@@ -104,9 +107,13 @@ def run(prefix, model, debug, device, iw_loss, pdb_iter, rep, sim_kwargs, seed,
                     path_posterior = '{}{}_iter_{}_posterior.pkl'.format(dirs['dir_nets'],
                         prefix, iteration-1)
                     approx_posterior = io.load(path_posterior)
+
+                    if not iw_loss:
+                        prior_alpha = None
+
                     net, props = lfi.net_reload(n_components=n_components,
                                                 postfix='iter_{}'.format(iteration-1),
-                                                prior_alpha=0.1,
+                                                prior_alpha=prior_alpha,
                                                 prior_proposal=approx_posterior)
 
                 lfi.train(net=net, postfix='iter_{}'.format(iteration), **train_kwargs)
