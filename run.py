@@ -30,7 +30,7 @@ from likelihoodfree.Inference import Inference
 @click.option('--prior-alpha', type=float, default=0.25,
               help='If provided, will use alpha as weight for true prior \
                     in proposal dstribution (only used if `iw_loss` is True)')
-@click.option('--rep', type=str, default='2,2',
+@click.option('--rep', type=str, default='2,1',
               help='Specify the number of repetitions per n_components model, \
                     seperation by comma')
 @click.option('--seed', type=int, default=None,
