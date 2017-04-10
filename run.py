@@ -115,7 +115,10 @@ def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
                                                 prior_alpha=prior_alpha,
                                                 prior_proposal=approx_posterior)
 
-                lfi.train(net=net, postfix='iter_{}'.format(iteration), **train_kwargs)
+                lfi.train(debug=debug,
+                          net=net,
+                          postfix='iter_{}'.format(iteration),
+                          **train_kwargs)
 
     except:
         t, v, tb = sys.exc_info()
