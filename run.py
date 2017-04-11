@@ -12,8 +12,6 @@ import sys
 import time
 
 from ast import literal_eval
-#from lfmods.hh import HHSimulator
-from lfmods.mog import MoGSimulator
 from likelihoodfree.Inference import Inference
 
 @click.command()
@@ -79,9 +77,13 @@ def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
     try:
         # simulator
         if model == 'mog':
+            from lfmods.mog import MoGSimulator
             sim = MoGSimulator(seed=seed, **sim_kwargs)
+        elif model == 'hh':
+            from lfmods.hh import HHSimulator
+            sim = HHSimulator(seed=seed, **sim_kwargs)
         else:
-            raise ValueError('sim not implemented')
+            raise ValueError('model not implemented')
 
         # training
         lfi = Inference(prefix=prefix,
