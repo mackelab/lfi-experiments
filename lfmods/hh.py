@@ -226,7 +226,7 @@ class HHSimulator(SimulatorBase):
             else:
                 return self._pilot_means
         else:
-            return 0
+            return 0.
 
     @lazyprop
     def pilot_stds(self):
@@ -237,7 +237,7 @@ class HHSimulator(SimulatorBase):
             else:
                 return self._pilot_stds
         else:
-            return 0
+            return 0.
 
     def _hash(self, *args):
         """Hashing function to generate key for shelve dicts
@@ -280,7 +280,7 @@ class HHSimulator(SimulatorBase):
             states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
 
         if self.cached_sims:
-            d[key] = states.reshape(-1, 1)
+            d[key] = states
             d.close()
 
         return states.reshape(n_samples, -1, 1)
