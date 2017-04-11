@@ -42,10 +42,12 @@ from likelihoodfree.Inference import Inference
 @click.option('--train-kwargs', type=str, default=None,
               help='If provided, will turned into dict and passed as kwargs to \
                     inference.train')
+@click.option('--true-prior', default=False, is_flag=True,
+              help='If True, will use true prior on all iterations')
 @click.option('--val', default=0,
               help='Number of samples for validation')
 def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
-        sim_kwargs, seed, svi, train_kwargs, val):
+        sim_kwargs, seed, svi, train_kwargs, true_prior, val):
     """Run model
 
     Call `run.py` together with a prefix and a model to run.
@@ -109,6 +111,10 @@ def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
 
                     if not iw_loss:
                         prior_alpha = None
+
+                    if true_prior:
+                        prior_alpha = None
+                        approx_posterior = None
 
                     net, props = lfi.net_reload(n_components=n_components,
                                                 postfix='iter_{}'.format(iteration-1),
