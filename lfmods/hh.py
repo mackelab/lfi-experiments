@@ -2,8 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import BiophysModel as bm
-#import BiophysModel_cython as bm
+import lfmods.hh_bm as bm
+#import lfmods.hh_bm_cython as bm
 import likelihoodfree.PDF as pdf
 import likelihoodfree.io as io
 import numpy as np
@@ -171,6 +171,18 @@ class HHSimulator(SimulatorBase):
         else:
             self.vars_volt_feats = np.zeros([1, self.n_summary_stats])
 
+    @lazyprop
+    def obs(self):
+        if self.obs_sim:
+            return self.get_obs_stats_sim()  # generate x0
+        else:
+            return self.get_obs_stats_data()  # generate x0
+
+    @lazyprop
+    def prior(self):
+        return pdf.Uniform(lower=self.prior_min, upper=self.prior_max,
+                           seed=self.gen_newseed())
+
     def set_current(self):
         # generate a step current
         step_current = np.zeros_like(self.t)
@@ -202,7 +214,7 @@ class HHSimulator(SimulatorBase):
 
         return str(hash(tuple(key)))
 
-    def pilot_run(self, n_sims=1000):
+    def pilot_run(self, n_samples=1000):
         """Pilot run
 
         Runs a number of simulations, and it calculates and saves the mean and
@@ -210,7 +222,7 @@ class HHSimulator(SimulatorBase):
 
         Parameters
         ----------
-        n_sims : int (default: 1000)
+        n_samples : int (default: 1000)
         """
         stats = []
 
@@ -218,7 +230,7 @@ class HHSimulator(SimulatorBase):
             cached_pilot_path = self.datadir + 'cached_pilot_seed_{}.pkl'.format(self.seed)
             d = shelve.open(cached_pilot_path)
 
-        for i in tqdm(range(n_sims)):
+        for i in tqdm(range(n_samples)):
             params = self.sim_prior()
             hh_seed = self.rng.randint(0, 2**31)
 
@@ -246,7 +258,7 @@ class HHSimulator(SimulatorBase):
 
         return means, stds
 
-    def forward_model(self, prop_params):
+    def forward_model(self, prop_params, n_samples=1):
         """Runs the model
 
         Parameters
@@ -257,6 +269,8 @@ class HHSimulator(SimulatorBase):
         -------
         states : tracelength x features (=1)
         """
+        assert n_samples == 1, 'n_samples > 1 not implemented'
+
         if self.cached_sims:
             cached_sims_path = self.datadir + 'cached_sims_seed_{}.pkl'.format(self.seed)
             d = shelve.open(cached_sims_path)
@@ -277,7 +291,7 @@ class HHSimulator(SimulatorBase):
             d[key] = states.reshape(-1, 1)
             d.close()
 
-        return states.reshape(-1, 1)
+        return states.reshape(n_samples, -1, 1)
 
     def get_obs_stats_sim(self):
         """Observed statistics from simulation
@@ -533,33 +547,19 @@ class HHSimulator(SimulatorBase):
 
         return sum_stats_vec.reshape(-1)
 
-    def sim_prior(self, num_sims=1):
+    def sim_prior(self, n_samples=1):
         """Simulate from prior
-
-        Assumes a uniform prior (in log domain or not)
 
         Parameters
         ----------
-        num_sims : int
+        n_samples : int
 
         Returns
         -------
-        output : if num_sims is 1: n_params, else: num_sims x n_params
+        n_samples x n_params
             If prior was in log domain, we inverse transform back to normal
         """
-        if self.prior_uniform:
-            z = self.rng.rand(len(self.true_params)) if num_sims == 1 else self.rng.rand(num_sims, len(self.true_params))
-            return self.param_invtransform((self.prior_max - self.prior_min) * z + self.prior_min)  # (1,12)
-        else:
-            z = self.prior_gauss.gen(num_sims)
-            return self.param_invtransform(z)
-
-    @lazyprop
-    def obs(self):
-        if self.obs_sim:
-            return self.get_obs_stats_sim()  # generate x0
-        else:
-            return self.get_obs_stats_data()  # generate x0
+        return self.param_invtransform(self.prior.gen(n_samples).reshape(n_samples, -1))  # (n_samples, 12)
 
     @lazyprop
     def pilot_means(self):
