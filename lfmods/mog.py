@@ -39,7 +39,7 @@ class MoGSimulator(SimulatorBase):
         self.alphas = np.array([0.5, 0.5])  # n_components,
         self.ms = np.stack([np.zeros((dim,)) for d in range(2)])  # n_components, dim
         self.Ss = np.stack([np.eye(dim) for d in range(2)])  # n_components, dim, dim
-        self.Ss[1:] *= 0.1**2  # std narrow component
+        self.Ss[1,:,:] *= 0.1**2  # std narrow component
 
         # second peak
         if bimodal:
