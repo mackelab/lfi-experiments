@@ -15,7 +15,7 @@ from ast import literal_eval
 from likelihoodfree.Inference import Inference
 
 @click.command()
-@click.argument('model', type=click.Choice(['mog', 'hh']))
+@click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error')
@@ -59,7 +59,6 @@ def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
     dirs = {}
     dirs['dir_data'] = 'results/'+model+'/data/'
     dirs['dir_nets'] = 'results/'+model+'/nets/'
-    dirs['dir_plots'] = 'results/'+model+'/plots/'
     for k, v in dirs.items():
         if not os.path.exists(v):
             os.makedirs(v)
@@ -75,17 +74,18 @@ def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
     sim_kwargs = string_to_kwargs(sim_kwargs)
 
     try:
-        # simulator
-        if model == 'mog':
-            from lfmods.mog import MoGSimulator
-            sim = MoGSimulator(seed=seed, **sim_kwargs)
+        if model == 'gauss':
+            from lfmods.gauss import GaussSimulator as Simulator
         elif model == 'hh':
-            from lfmods.hh import HHSimulator
-            sim = HHSimulator(seed=seed, **sim_kwargs)
+            from lfmods.hh import HHSimulator as Simulator
+        elif model == 'mog':
+            from lfmods.mog import MoGSimulator as Simulator
         else:
-            raise ValueError('model not implemented')
+            raise ValueError('could not import Simulator')
 
-        # training
+        sim = Simulator(seed=seed,
+                        **sim_kwargs)
+
         lfi = Inference(prefix=prefix,
                         seed=seed,
                         sim=sim,
