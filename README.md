@@ -30,4 +30,4 @@ python nb.py mog quicktest
 
 ## Contributing
 
-- Save notebooks without outputs, to save space and for better diff; to automatically stip outputs from notebooks before commiting, see https://github.com/kynan/nbstripout 
+- Save notebooks without outputs, to save space and for better diffs; to automatically strip outputs from notebooks before committing, see https://github.com/kynan/nbstripout 
