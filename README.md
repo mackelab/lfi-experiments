@@ -26,3 +26,8 @@ python nb.py mog quicktest
 ## Notes
 
 - Make sure to have the `likelihoodfree` installed as a package, see https://github.com/mackelab/likelihoodfree
+
+
+## Contributing
+
+- Save notebooks without outputs, to save space and for better diff; to automatically stip outputs from notebooks before commiting, see https://github.com/kynan/nbstripout 
