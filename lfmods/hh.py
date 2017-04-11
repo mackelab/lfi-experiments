@@ -274,7 +274,7 @@ class HHSimulator(SimulatorBase):
         key = self._hash(hh_seed, np.sum(prop_params))
 
         if self.cached_sims and key in d:
-            return d[key]
+            states = d[key]
         else:
             hh = bm.HH(self.init, prop_params.reshape(1, -1), seed=hh_seed)
             states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
