@@ -63,13 +63,18 @@ def export_notebook_to_html(nb, notebook_filename_out):
               help='If True, will raise browser window when ready')
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error')
+@click.option('--jupyter/--no-jupyter', default=False, is_flag=True,
+              help='If True, will try to open Jupyter NB instead of HTML')
+@click.option('--jupyter-port', type=int, default=8888,
+              help='Jupyter port')
 @click.option('--nb', type=str, default='viz',
               help='Will use notebooks/model_$nb.ipynb, where $nb defaults to viz')
 @click.option('--open', type=bool, default=True, is_flag=True,
               help='If True, will try to open HTML notebook')
 @click.option('--postfix', type=str, default=None,
               help='Postfix')
-def run(model, prefix, autoraise, debug, nb, open, postfix):
+def run(model, prefix, autoraise, debug, nb, jupyter, jupyter_port, open,
+        postfix):
     """Generate notebook and HTML output
 
     Call `nb.py` together with a prefix and a model to run.
@@ -87,11 +92,17 @@ def run(model, prefix, autoraise, debug, nb, open, postfix):
     try:
         path_ipynb = dirs['dir_nb'] + prefix + '.ipynb'
         path_html = dirs['dir_nb'] + prefix + '.html'
-        execute_notebook(model + '_' + nb + '.ipynb',
+        execute_notebook('../../../notebooks/' + model + '_' + nb + '.ipynb',
                          path_ipynb,
-                         {'prefix': prefix, 'postfix': postfix},
-                         run_path='./notebooks/')
-        url = 'file://' + os.path.realpath(path_html)
+                         {'prefix': prefix,
+                          'postfix': postfix,
+                          'basepath': '../'},
+                         run_path=dirs['dir_nb'])
+        if not jupyter:
+            url = 'file://' + os.path.realpath(path_html)
+        else:
+            url_tpl = 'http://localhost:{}/notebooks/results/{}/notebooks/{}.ipynb'
+            url = url_tpl.format(jupyter_port, model, prefix)
         webbrowser.open(url, autoraise=autoraise, new=True)
     except:
         t, v, tb = sys.exc_info()
