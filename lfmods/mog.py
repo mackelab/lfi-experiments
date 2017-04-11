@@ -2,16 +2,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import likelihoodfree.io as io
 import likelihoodfree.PDF as pdf
+import numpy as np
 import pdb
 
 from likelihoodfree.PDF import discrete_sample
 from likelihoodfree.Simulator import lazyprop, SimulatorBase
 
 class MoGSimulator(SimulatorBase):
-    def __init__(self, bimodal=False, dim=1, seed=None):
+    def __init__(self,
+                 bimodal=False,
+                 dim=1,
+                 seed=None):
         """Mixture of Gaussians simulator
 
         Parameters
@@ -49,7 +52,7 @@ class MoGSimulator(SimulatorBase):
         self.prior_min = np.array([-10.0 for d in range(dim)])  # dim,
         self.prior_max = np.array([ 10.0 for d in range(dim)])  # dim,
 
-    @property
+    @lazyprop
     def obs(self):
         return np.zeros((1, self.dim))  # 1 x dim data
 
@@ -58,26 +61,47 @@ class MoGSimulator(SimulatorBase):
         return pdf.Uniform(lower=self.prior_min, upper=self.prior_max,
                            seed=self.gen_newseed())
 
+    @lazyprop
+    def posterior(self):
+        """Calculates posterior analytically.
+
+        Note that this assumes a flat improper prior.
+        """
+        # list of n_components len with elements dim, dim (covariances)
+        Ss = [self.Ss[i,:,:] for i in range(len(self.Ss))]
+        return pdf.MoG(a=self.alphas, ms=self.ms, Ss=Ss)
+
     @staticmethod
     def calc_summary_stats(x):
-        return x
+        """Calculate summary statistics
 
-    def forward_model(self, theta, n_samples=1):
-        """Given a mean parameter, simulates the likelihood.
+        Returns the identity
 
         Parameters
         ----------
-        theta : dim theta,
-        n_samples : int
-            If greater than 1, generate multiple samples given theta.
+        x : n_samples x dim data
 
-        Returns
-        -------
+        Return
+        ------
+        n_samples x dim summary stats
+        """
+        return x
+
+    def forward_model(self, theta, n_samples=1):
+        """Given a mean parameter, simulates the likelihood
+
+        Parameters
+        ----------
+        theta : dim theta
+        n_samples : int
+            If greater than 1, generate multiple samples given theta
+
+        Return
+        ------
         n_samples x dim data
         """
-        theta = np.asarray(theta)
-        assert theta.ndim == 1, 'theta should be a 1d array'
-        assert theta.shape[0] == self.dim, 'theta.shape[0] should be dim long'
+        assert theta.ndim == 1, 'theta.ndim must be 1'
+        assert theta.shape[0] == self.dim, 'theta.shape[0] must be dim theta long'
 
         # list of n_components len with elements dim, (means)
         ms = [theta for l in range(len(self.ms))]
@@ -89,12 +113,3 @@ class MoGSimulator(SimulatorBase):
         samples = mog.gen(n_samples=n_samples)
 
         return samples
-
-    def calc_posterior(self):
-        """Calculates posterior analytically.
-
-        Note that this assumes a flat improper prior.
-        """
-        # list of n_components len with elements dim, dim (covariances)
-        Ss = [self.Ss[i,:,:] for i in range(len(self.Ss))]
-        return pdf.MoG(a=self.alphas, ms=self.ms, Ss=Ss)

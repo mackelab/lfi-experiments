@@ -91,6 +91,7 @@ class HHSimulator(SimulatorBase):
             import lfmods.hh_bm_cython as bm
         else:
             import lfmods.hh_bm as bm
+        self.bm = bm
 
         if pilot_samples > 0:
             self.pilot_norm = True
@@ -164,8 +165,8 @@ class HHSimulator(SimulatorBase):
     def obs(self):
         if self.obs_sim:
             # generate observed data from simulation
-            hh = bm.HH(self.init, self.true_params.reshape(1, -1),
-                       seed=self.gen_newseed())
+            hh = self.bm.HH(self.init, self.true_params.reshape(1, -1),
+                            seed=self.gen_newseed())
             states = hh.sim_time(self.dt, self.t, self.I)
             stats = self.calc_summary_stats(states)
         else:
@@ -260,30 +261,33 @@ class HHSimulator(SimulatorBase):
 
         return str(hash(tuple(key)))
 
-    def forward_model(self, prop_params, n_samples=1):
+    def forward_model(self, theta, n_samples=1):
         """Runs the model
 
         Parameters
         ----------
-        show_figure : bool
+        theta : dim theta
+        n_samples : int
+            If greater than 1, generate multiple samples given theta
 
         Returns
         -------
-        states : tracelength x features (=1)
+        n_samples x tracelength x features (=1)
         """
-        assert n_samples == 1, 'n_samples > 1 not implemented'
+        assert theta.ndim == 1, 'theta.ndim must be 1'
+        assert theta.shape[0] == self.n_params, 'theta.shape[0] must be dim theta long'
 
         if self.cached_sims:
             cached_sims_path = self.dir_cache + 'cached_sims_seed_{}.pkl'.format(self.seed)
             d = shelve.open(cached_sims_path)
 
         hh_seed = self.gen_newseed()
-        key = self._hash(hh_seed, np.sum(prop_params))
+        key = self._hash(hh_seed, np.sum(theta))
 
         if self.cached_sims and key in d:
             states = d[key]
         else:
-            hh = bm.HH(self.init, prop_params.reshape(1, -1), seed=hh_seed)
+            hh = self.bm.HH(self.init, theta.reshape(1, -1), seed=hh_seed)
             states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
 
         if self.cached_sims:
@@ -299,25 +303,29 @@ class HHSimulator(SimulatorBase):
 
         Parameters
         ----------
-        states : timesteps x features (=1)
+        states : n_samples (=1) x timesteps x features (=1)
         skip_norm : bool
             If True, will skip pilot run normalization disregarding self.pilot_norm setting
 
-        Returns
-        -------
-        Array of summary stats
+        Return
+        ------
+        n_samples (=1) x dim summary stats
 
         Notes
         -----
         Output will be based on summary_stats property
         """
-        assert states.ndim == 2, 'excepting 2d input'
-        assert states.shape[1] == 1, 'expecting feature dimension to be 1'
+        assert states.ndim == 3, 'input must be 3d'
+        assert states.shape[0] == 1, 'n_samples dim must be 1'
+        assert states.shape[2] == 1, 'feature dim must be 1'
+
+        states = states[0, :, :]
 
         # no summary stats?
         if self.summary_stats == 0:
+            pdb.set_trace()
             return np.hstack((states[::self.signal_ds].reshape(-1,1),
-                              self.I[::self.signal_ds].reshape(-1,1)))
+                              self.I[::self.signal_ds].reshape(-1,1))).reshape(1, -1)
 
         x = states.reshape(-1)
         len_x = x.shape[0]
@@ -463,7 +471,7 @@ class HHSimulator(SimulatorBase):
             sum_stats_vec -= self.pilot_means
             sum_stats_vec /= self.pilot_stds
 
-        return sum_stats_vec.reshape(-1)
+        return sum_stats_vec.reshape(1, -1)
 
 
     def pilot_run(self):
@@ -487,7 +495,7 @@ class HHSimulator(SimulatorBase):
             if self.cached_pilot and key in d:
                 states = d[key]
             else:
-                hh = bm.HH(self.init, params.reshape(1, -1), seed=hh_seed)
+                hh = self.bm.HH(self.init, params.reshape(1, -1), seed=hh_seed)
                 states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
 
             stats.append(self.calc_summary_stats(states, skip_norm=True))
