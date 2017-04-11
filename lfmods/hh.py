@@ -2,8 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import lfmods.hh_bm as bm
-#import lfmods.hh_bm_cython as bm
 import likelihoodfree.PDF as pdf
 import likelihoodfree.io as io
 import numpy as np
@@ -20,6 +18,7 @@ class HHSimulator(SimulatorBase):
     def __init__(self,
                  cached_pilot=True,
                  cached_sims=True,
+                 cython=False,
                  dir_cache='results/hh/data/',
                  duration=120,
                  obs_sim=True,
@@ -37,6 +36,8 @@ class HHSimulator(SimulatorBase):
             If True, will try to use cached pilot data (only works if seed is set)
         cached_sims : bool
             If True, and iff seed is specified, will cache simulations (only works if seed is set)
+        cython : bool
+            If True, will use cython version of simulator (different import)
         dir_cache : str
             Sets dir for cache
         duration : int
@@ -77,6 +78,7 @@ class HHSimulator(SimulatorBase):
 
         self.cached_pilot = cached_pilot
         self.cached_sims = cached_sims
+        self.cython = cython
         self.dir_cache = dir_cache
         self.duration = duration
         self.obs_sim = obs_sim
@@ -84,6 +86,11 @@ class HHSimulator(SimulatorBase):
         self.step_current = step_current
         self.summary_stats = summary_stats
         self.verbose = verbose
+
+        if cython:
+            import lfmods.hh_bm_cython as bm
+        else:
+            import lfmods.hh_bm as bm
 
         if pilot_samples > 0:
             self.pilot_norm = True
