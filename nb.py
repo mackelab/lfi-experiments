@@ -63,7 +63,7 @@ def export_notebook_to_html(nb, notebook_filename_out):
               help='If True, will raise browser window when ready')
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error')
-@click.option('--jupyter/--no-jupyter', default=False, is_flag=True,
+@click.option('--jupyter/--no-jupyter', default=True, is_flag=True,
               help='If True, will try to open Jupyter NB instead of HTML')
 @click.option('--jupyter-port', type=int, default=8888,
               help='Jupyter port')
@@ -92,21 +92,25 @@ def run(model, prefix, autoraise, debug, nb, jupyter, jupyter_port, open,
     try:
         path_ipynb = dirs['dir_nb'] + prefix + '.ipynb'
         path_html = dirs['dir_nb'] + prefix + '.html'
+
+        if not jupyter:
+            url = 'file://' + os.path.realpath(path_html)
+        else:
+            url_tpl = 'http://localhost:{}/notebooks/results/{}/notebooks/{}.ipynb'
+            url = url_tpl.format(jupyter_port, model, prefix)
+
         execute_notebook('../../../notebooks/' + model + '_' + nb + '.ipynb',
                          path_ipynb,
                          {'prefix': prefix,
                           'postfix': postfix,
                           'basepath': '../'},
                          run_path=dirs['dir_nb'])
-        if not jupyter:
-            url = 'file://' + os.path.realpath(path_html)
-        else:
-            url_tpl = 'http://localhost:{}/notebooks/results/{}/notebooks/{}.ipynb'
-            url = url_tpl.format(jupyter_port, model, prefix)
+
         webbrowser.open(url, autoraise=autoraise, new=True)
     except:
         t, v, tb = sys.exc_info()
         if debug:
+            webbrowser.open(url, autoraise=autoraise, new=True)
             print('')
             print('Exception')
             print(v.with_traceback(tb))
