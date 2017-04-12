@@ -8,16 +8,20 @@ import numpy as np
 import os
 import pdb
 import six
+import subprocess
 import sys
 import time
 
 from ast import literal_eval
 from likelihoodfree.Inference import Inference
-from subprocess import call
+from redis import Redis
+from rq import Queue
 
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
+@click.option('--enqueue', default=False, is_flag=True,
+              help='Enqueue job rather than running it now (requires batch/worker.py) to run in background.')
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error.')
 @click.option('--device', default='cpu',
@@ -48,7 +52,7 @@ from subprocess import call
               help='If True, will use true prior on all iterations.')
 @click.option('--val', default=0,
               help='Number of samples for validation.')
-def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
+def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
         prior_alpha, rep, rnn, sim_kwargs, seed, svi, train_kwargs, true_prior, val):
     """Run model
 
@@ -142,7 +146,7 @@ def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
                 debug_flag = ['--debug']
             else:
                 debug_flag = []
-            call([sys.executable, 'nb.py', model, prefix] + nb_flags.split() + debug_flag)
+            subprocess.call([sys.executable, 'nb.py', model, prefix] + nb_flags.split() + debug_flag)
 
     except:
         t, v, tb = sys.exc_info()
@@ -155,4 +159,23 @@ def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
             raise v.with_traceback(tb)
 
 if __name__ == '__main__':
-    run()
+    args = sys.argv
+    if '--enqueue' in args:
+        timeout = int(1e6)
+        ttl = -1
+        connection = Redis()
+        queue  = Queue('default', connection=connection)
+
+        func_args = [sys.executable] + sys.argv
+        func_args.remove('--enqueue')
+
+        def subprocs_exec(args):
+            subprocess.call(args, shell=False)
+
+        queue.enqueue_call(func=subprocs_exec,
+                           args=(func_args,),
+                           timeout=timeout, ttl=ttl,
+                           result_ttl=ttl)
+        print('job enqueued')
+    else:
+        run()
