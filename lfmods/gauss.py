@@ -44,12 +44,15 @@ class GaussSimulator(SimulatorBase):
         self.dim = dim
         self.n_summary = n_summary
 
-    @lazyprop
-    def obs(self):
+        # observed
+        # note: placed in init as it is required by prior as well as posterior
         self.x0_distrib = pdf.Gaussian(m=self.true_params, S=self.noise_cov,
                                        seed=self.gen_newseed())  # *1./N
         self.x0_sample = self.x0_distrib.gen(self.n_summary)
         self.x0_sample_mean = np.mean(self.x0_sample)
+
+    @lazyprop
+    def obs(self):
         return np.array([self.x0_sample_mean]).reshape(1, -1)  # 1 x dim summary stats
 
     @lazyprop
@@ -78,13 +81,13 @@ class GaussSimulator(SimulatorBase):
 
         Parameters
         ----------
-        x : n_samples x dim theta
+        x : n_samples x dim data
 
-        Return
-        ------
-        n_samples x dim summary stats
+        Returns
+        -------
+        n_samples x dim summary stats (=1)
         """
-        return np.mean(x, axis=0)
+        return np.mean(x, axis=0).reshape(-1, 1)
 
     def forward_model(self, theta, n_samples=1):
         """Given a mean parameter, simulates the likelihood
@@ -101,7 +104,8 @@ class GaussSimulator(SimulatorBase):
         """
         assert theta.ndim == 1, 'theta.ndim must be 1'
         assert theta.shape[0] == self.dim, 'theta.shape[0] must be dim theta long'
+        assert n_samples == 1, 'assert n_samples > 1 not supported'
 
         samples = pdf.Gaussian(m=theta, S=self.noise_cov,
-                               seed=self.gen_newseed()).gen(n_samples)
+                               seed=self.gen_newseed()).gen(self.n_summary)
         return samples
