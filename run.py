@@ -19,40 +19,42 @@ from subprocess import call
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
 @click.option('--debug/--no-debug', default=False, is_flag=True,
-              help='If True, will enter debugger on error')
+              help='If True, will enter debugger on error.')
 @click.option('--device', default='cpu',
-              help='Device to compute on')
+              help='Device to compute on.')
 @click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True,
               help='Use IW loss?')
 @click.option('--nb', default=False, is_flag=True,
-              help='If provided, will call nb.py after fitting')
+              help='If provided, will call nb.py after fitting.')
 @click.option('--nb-flags', default=str,
-              help='If provided, will be passed to nb.py')
+              help='If provided, will be passed to nb.py.')
 @click.option('--pdb-iter', type=int, default=None,
-              help='Number of iterations after which to debug')
+              help='Number of iterations after which to debug.')
 @click.option('--prior-alpha', type=float, default=0.25,
-              help='If provided, will use alpha as weight for true prior in proposal dstribution (only used if `iw_loss` is True)')
+              help='If provided, will use alpha as weight for true prior in proposal distribution (only used if iw_loss is True).')
 @click.option('--rep', type=str, default='2,1',
-              help='Specify the number of repetitions per n_components model, seperation by comma')
+              help='Specify the number of repetitions per n_components model, seperation by comma.')
+@click.option('--rnn', type=int, default=None,
+              help='If specified, will use many-to-one RNN with specified number of hidden units instead of summary statistics.')
 @click.option('--seed', type=int, default=None,
               help='If provided, network and simulation are seeded')
 @click.option('--sim-kwargs', type=str, default=None,
-              help='If provided, will turned into dict and passed as kwargs to simulator')
+              help='If provided, will turned into dict and passed as kwargs to simulator.')
 @click.option('--svi/--no-svi', default=False, is_flag=True,
               help='Use SVI version?')
 @click.option('--train-kwargs', type=str, default=None,
-              help='If provided, will turned into dict and passed as kwargs to inference.train')
+              help='If provided, will turned into dict and passed as kwargs to inference.train.')
 @click.option('--true-prior', default=False, is_flag=True,
-              help='If True, will use true prior on all iterations')
+              help='If True, will use true prior on all iterations.')
 @click.option('--val', default=0,
-              help='Number of samples for validation')
+              help='Number of samples for validation.')
 def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
-        prior_alpha, rep, sim_kwargs, seed, svi, train_kwargs, true_prior, val):
+        prior_alpha, rep, rnn, sim_kwargs, seed, svi, train_kwargs, true_prior, val):
     """Run model
 
-    Call `run.py` together with a prefix and a model to run.
+    Call run.py together with a prefix and a model to run.
 
-    See `run.py --help` for info on parameters.
+    See run.py --help for info on parameters.
     """
     # set env variables
     os.environ["THEANO_FLAGS"] = "device=" + device + ",floatX=float32,lib.cnmem=0.8"
@@ -80,6 +82,9 @@ def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
             from lfmods.gauss import GaussSimulator as Simulator
         elif model == 'hh':
             from lfmods.hh import HHSimulator as Simulator
+            if rnn is not None:
+                sim_kwargs['pilot_samples'] = 0
+                sim_kwargs['summary_stats'] = 0
         elif model == 'mog':
             from lfmods.mog import MoGSimulator as Simulator
         else:
@@ -106,7 +111,8 @@ def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
                 if not created:
                     net, props = lfi.net_create(iw_loss=iw_loss,
                                                 n_components=n_components,
-                                                svi=svi)
+                                                svi=svi,
+                                                rnn_hiddens=rnn)
                     created = True
                 else:
                     path_posterior = '{}{}_iter_{}_posterior.pkl'.format(dirs['dir_nets'],
