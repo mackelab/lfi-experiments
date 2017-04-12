@@ -3,7 +3,6 @@ results/data/*
 results/figs/*
 results/nets/*
 results/plots/*
-*.sh
 
 # Notebook checkpoints
 .ipynb_checkpoints
