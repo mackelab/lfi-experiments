@@ -33,6 +33,9 @@ Usage: run.py [OPTIONS] MODEL PREFIX
   See run.py --help for info on parameters.
 
 Options:
+  --enqueue                 Enqueue job rather than running it now. This
+                            requires a running worker process, which can be
+                            started with worker.py
   --debug / --no-debug      If True, will enter debugger on error.
   --device TEXT             Device to compute on.
   --iw-loss / --no-iw-loss  Use IW loss?
@@ -43,10 +46,18 @@ Options:
                             prior in proposal distribution (only used if
                             iw_loss is True).
   --rep TEXT                Specify the number of repetitions per n_components
-                            model, seperation by comma.
+                            model, seperation by comma. For instance, '2,1'
+                            would mean that 2 itertions with 1 component are
+                            run, and 1 iteration with 2 components are run.
   --rnn INTEGER             If specified, will use many-to-one RNN with
                             specified number of hidden units instead of
                             summary statistics.
+  --samples TEXT            Number of samples, provided as either a single
+                            number or as a comma seperated list. If a list is
+                            provided, say '500,2000', 500 samples are drawn
+                            for the first iteration, and 2000 samples for the
+                            second iteration. If more iterations are run, 2000
+                            samples will be drawn (last list element).
   --seed INTEGER            If provided, network and simulation are seeded
   --sim-kwargs TEXT         If provided, will turned into dict and passed as
                             kwargs to simulator.

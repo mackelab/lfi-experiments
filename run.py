@@ -21,7 +21,8 @@ from rq import Queue
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
 @click.option('--enqueue', default=False, is_flag=True,
-              help='Enqueue job rather than running it now (requires batch/worker.py) to run in background.')
+              help='Enqueue job rather than running it now. This requires a \
+running worker process, which can be started with worker.py')
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error.')
 @click.option('--device', default='cpu',
@@ -35,25 +36,37 @@ from rq import Queue
 @click.option('--pdb-iter', type=int, default=None,
               help='Number of iterations after which to debug.')
 @click.option('--prior-alpha', type=float, default=0.25,
-              help='If provided, will use alpha as weight for true prior in proposal distribution (only used if iw_loss is True).')
+              help='If provided, will use alpha as weight for true prior in \
+proposal distribution (only used if iw_loss is True).')
 @click.option('--rep', type=str, default='2,1',
-              help='Specify the number of repetitions per n_components model, seperation by comma.')
+              help='Specify the number of repetitions per n_components model, \
+seperation by comma. For instance, \'2,1\' would mean that 2 itertions with \
+1 component are run, and 1 iteration with 2 components are run.')
 @click.option('--rnn', type=int, default=None,
               help='If specified, will use many-to-one RNN with specified number of hidden units instead of summary statistics.')
+@click.option('--samples', default='500,2000', type=str,
+              help='Number of samples, provided as either a single number or \
+as a comma seperated list. If a list is provided, say \'500,2000\', \
+500 samples are drawn for the first iteration, and 2000 samples for the second \
+iteration. If more iterations are run, 2000 samples will be drawn (last list \
+element).')
 @click.option('--seed', type=int, default=None,
               help='If provided, network and simulation are seeded')
 @click.option('--sim-kwargs', type=str, default=None,
-              help='If provided, will turned into dict and passed as kwargs to simulator.')
+              help='If provided, will turned into dict and passed as kwargs to \
+simulator.')
 @click.option('--svi/--no-svi', default=False, is_flag=True,
               help='Use SVI version?')
 @click.option('--train-kwargs', type=str, default=None,
-              help='If provided, will turned into dict and passed as kwargs to inference.train.')
+              help='If provided, will turned into dict and passed as kwargs to \
+inference.train.')
 @click.option('--true-prior', default=False, is_flag=True,
               help='If True, will use true prior on all iterations.')
 @click.option('--val', default=0,
               help='Number of samples for validation.')
 def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
-        prior_alpha, rep, rnn, sim_kwargs, seed, svi, train_kwargs, true_prior, val):
+        prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
+        true_prior, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -105,8 +118,12 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
         created = False
         iteration = 0
         n_components = 0
+        n_samples = []
 
-        for r in [int(r) for r in rep.split(',')]:
+        samples = [int(s) for s in samples.split(',')]
+        reps = [int(r) for r in rep.split(',')]
+
+        for r in reps:
             n_components += 1
             for i in range(r):
                 iteration += 1
@@ -135,7 +152,14 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
                                                 prior_alpha=prior_alpha,
                                                 prior_proposal=approx_posterior)
 
+
+                try:
+                    n_samples = samples[iteration-1]
+                except IndexError:
+                    n_samples = samples[-1]
+
                 lfi.train(debug=debug,
+                          n_samples=n_samples,
                           net=net,
                           postfix='iter_{}'.format(iteration),
                           **train_kwargs)
