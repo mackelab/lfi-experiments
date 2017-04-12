@@ -31,11 +31,9 @@ from subprocess import call
 @click.option('--pdb-iter', type=int, default=None,
               help='Number of iterations after which to debug')
 @click.option('--prior-alpha', type=float, default=0.25,
-              help='If provided, will use alpha as weight for true prior \
-                    in proposal dstribution (only used if `iw_loss` is True)')
+              help='If provided, will use alpha as weight for true prior in proposal dstribution (only used if `iw_loss` is True)')
 @click.option('--rep', type=str, default='2,1',
-              help='Specify the number of repetitions per n_components model, \
-                    seperation by comma')
+              help='Specify the number of repetitions per n_components model, seperation by comma')
 @click.option('--seed', type=int, default=None,
               help='If provided, network and simulation are seeded')
 @click.option('--sim-kwargs', type=str, default=None,
@@ -43,8 +41,7 @@ from subprocess import call
 @click.option('--svi/--no-svi', default=False, is_flag=True,
               help='Use SVI version?')
 @click.option('--train-kwargs', type=str, default=None,
-              help='If provided, will turned into dict and passed as kwargs to \
-                    inference.train')
+              help='If provided, will turned into dict and passed as kwargs to inference.train')
 @click.option('--true-prior', default=False, is_flag=True,
               help='If True, will use true prior on all iterations')
 @click.option('--val', default=0,
