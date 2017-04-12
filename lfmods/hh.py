@@ -208,7 +208,8 @@ class HHSimulator(SimulatorBase):
             # times = np.arange(0, len(v)) * (200.0 / sampling_rate)
 
             stats = self.calc_summary_stats(states)
-        return stats.reshape(1, -1)
+
+        return stats
 
     @lazyprop
     def prior(self):
@@ -363,9 +364,9 @@ class HHSimulator(SimulatorBase):
 
         # no summary stats?
         if self.summary_stats == 0:
-            pdb.set_trace()
-            return np.hstack((states[::self.signal_ds].reshape(-1,1),
-                              self.I[::self.signal_ds].reshape(-1,1))).reshape(1, -1)
+            stats = np.hstack((states[::self.signal_ds].reshape(-1,1),
+                              self.I[::self.signal_ds].reshape(-1,1)))
+            return stats[np.newaxis, :]  # 1 x time series x 2 features
 
         x = states.reshape(-1)
         len_x = x.shape[0]
