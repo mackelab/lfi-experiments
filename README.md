@@ -35,20 +35,23 @@ Usage: run.py [OPTIONS] MODEL PREFIX
 Options:
   --enqueue                 Enqueue job rather than running it now. This
                             requires a running worker process, which can be
-                            started with worker.py
-  --debug / --no-debug      If True, will enter debugger on error.
-  --device TEXT             Device to compute on.
-  --iw-loss / --no-iw-loss  Use IW loss?
+                            started with worker.py  [default: False]
+  --debug / --no-debug      If True, will enter debugger on error.  [default:
+                            False]
+  --device TEXT             Device to compute on.  [default: cpu]
+  --iw-loss / --no-iw-loss  Use IW loss?  [default: False]
   --nb                      If provided, will call nb.py after fitting.
+                            [default: False]
   --nb-flags TEXT           If provided, will be passed to nb.py.
   --pdb-iter INTEGER        Number of iterations after which to debug.
   --prior-alpha FLOAT       If provided, will use alpha as weight for true
                             prior in proposal distribution (only used if
-                            iw_loss is True).
+                            iw_loss is True).  [default: 0.25]
   --rep TEXT                Specify the number of repetitions per n_components
                             model, seperation by comma. For instance, '2,1'
                             would mean that 2 itertions with 1 component are
                             run, and 1 iteration with 2 components are run.
+                            [default: 2,1]
   --rnn INTEGER             If specified, will use many-to-one RNN with
                             specified number of hidden units instead of
                             summary statistics.
@@ -58,14 +61,16 @@ Options:
                             for the first iteration, and 2000 samples for the
                             second iteration. If more iterations are run, 2000
                             samples will be drawn (last list element).
+                            [default: 500,2000]
   --seed INTEGER            If provided, network and simulation are seeded
   --sim-kwargs TEXT         If provided, will turned into dict and passed as
                             kwargs to simulator.
-  --svi / --no-svi          Use SVI version?
+  --svi / --no-svi          Use SVI version?  [default: False]
   --train-kwargs TEXT       If provided, will turned into dict and passed as
                             kwargs to inference.train.
   --true-prior              If True, will use true prior on all iterations.
-  --val INTEGER             Number of samples for validation.
+                            [default: False]
+  --val INTEGER             Number of samples for validation.  [default: 0]
   --help                    Show this message and exit.
 ```
 

@@ -20,49 +20,49 @@ from rq import Queue
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
-@click.option('--enqueue', default=False, is_flag=True,
+@click.option('--enqueue', default=False, is_flag=True, show_default=True,
               help='Enqueue job rather than running it now. This requires a \
 running worker process, which can be started with worker.py')
-@click.option('--debug/--no-debug', default=False, is_flag=True,
+@click.option('--debug/--no-debug', default=False, is_flag=True, show_default=True,
               help='If True, will enter debugger on error.')
-@click.option('--device', default='cpu',
+@click.option('--device', default='cpu', show_default=True,
               help='Device to compute on.')
-@click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True,
+@click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True, show_default=True,
               help='Use IW loss?')
-@click.option('--nb', default=False, is_flag=True,
+@click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
-@click.option('--nb-flags', default=str,
+@click.option('--nb-flags', type=str, default=None, show_default=True,
               help='If provided, will be passed to nb.py.')
-@click.option('--pdb-iter', type=int, default=None,
+@click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
-@click.option('--prior-alpha', type=float, default=0.25,
+@click.option('--prior-alpha', type=float, default=0.25, show_default=True,
               help='If provided, will use alpha as weight for true prior in \
 proposal distribution (only used if iw_loss is True).')
-@click.option('--rep', type=str, default='2,1',
+@click.option('--rep', type=str, default='2,1', show_default=True,
               help='Specify the number of repetitions per n_components model, \
 seperation by comma. For instance, \'2,1\' would mean that 2 itertions with \
 1 component are run, and 1 iteration with 2 components are run.')
-@click.option('--rnn', type=int, default=None,
+@click.option('--rnn', type=int, default=None, show_default=True,
               help='If specified, will use many-to-one RNN with specified number of hidden units instead of summary statistics.')
-@click.option('--samples', default='500,2000', type=str,
+@click.option('--samples', default='500,2000', type=str, show_default=True,
               help='Number of samples, provided as either a single number or \
 as a comma seperated list. If a list is provided, say \'500,2000\', \
 500 samples are drawn for the first iteration, and 2000 samples for the second \
 iteration. If more iterations are run, 2000 samples will be drawn (last list \
 element).')
-@click.option('--seed', type=int, default=None,
+@click.option('--seed', type=int, default=None, show_default=True,
               help='If provided, network and simulation are seeded')
-@click.option('--sim-kwargs', type=str, default=None,
+@click.option('--sim-kwargs', type=str, default=None, show_default=True,
               help='If provided, will turned into dict and passed as kwargs to \
 simulator.')
-@click.option('--svi/--no-svi', default=False, is_flag=True,
+@click.option('--svi/--no-svi', default=False, is_flag=True, show_default=True,
               help='Use SVI version?')
-@click.option('--train-kwargs', type=str, default=None,
+@click.option('--train-kwargs', type=str, default=None, show_default=True,
               help='If provided, will turned into dict and passed as kwargs to \
 inference.train.')
-@click.option('--true-prior', default=False, is_flag=True,
+@click.option('--true-prior', default=False, is_flag=True, show_default=True,
               help='If True, will use true prior on all iterations.')
-@click.option('--val', default=0,
+@click.option('--val', default=0, show_default=True,
               help='Number of samples for validation.')
 def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
         prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
