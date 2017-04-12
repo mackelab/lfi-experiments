@@ -167,7 +167,7 @@ class HHSimulator(SimulatorBase):
             # generate observed data from simulation
             hh = self.bm.HH(self.init, self.true_params.reshape(1, -1),
                             seed=self.gen_newseed())
-            states = hh.sim_time(self.dt, self.t, self.I)
+            states = hh.sim_time(self.dt, self.t, self.I).reshape(1, -1, 1)
             stats = self.calc_summary_stats(states)
         else:
             # use real data
