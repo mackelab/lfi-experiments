@@ -44,19 +44,20 @@ class GaussSimulator(SimulatorBase):
         self.dim = dim
         self.n_summary = n_summary
 
-        self.x0_dist = pdf.Gaussian(m=self.true_params, S=self.noise_cov, seed=self.gen_newseed())  # *1./N
-        self.x0_sample = self.x0_dist.gen(self.n_summary)
-        self.x0_sample_mean = np.mean(self.x0_sample)
-
     @lazyprop
     def obs(self):
+        self.x0_distrib = pdf.Gaussian(m=self.true_params, S=self.noise_cov,
+                                       seed=self.gen_newseed())  # *1./N
+        self.x0_sample = self.x0_distrib.gen(self.n_summary)
+        self.x0_sample_mean = np.mean(self.x0_sample)
         return np.array([self.x0_sample_mean]).reshape(1, -1)  # 1 x dim summary stats
 
     @lazyprop
     def prior(self):
         self.prior_cov = 20.*np.eye(self.dim)
         self.prior_mu = 0.
-        return pdf.Gaussian(m=self.prior_mu, S=self.prior_cov, seed=self.seed)
+        return pdf.Gaussian(m=self.prior_mu, S=self.prior_cov,
+                            seed=self.gen_newseed())
 
     @lazyprop
     def posterior(self):
