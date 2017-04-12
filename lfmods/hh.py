@@ -272,10 +272,11 @@ class HHSimulator(SimulatorBase):
 
         Returns
         -------
-        n_samples x tracelength x features (=1)
+        n_samples (=1) x tracelength x features (=1)
         """
         assert theta.ndim == 1, 'theta.ndim must be 1'
         assert theta.shape[0] == self.n_params, 'theta.shape[0] must be dim theta long'
+        assert n_samples == 1, 'assert n_samples > 1 not supported'
 
         if self.cached_sims:
             cached_sims_path = self.dir_cache + 'cached_sims_seed_{}.pkl'.format(self.seed)
@@ -295,6 +296,45 @@ class HHSimulator(SimulatorBase):
             d.close()
 
         return states.reshape(n_samples, -1, 1)
+
+    def pilot_run(self):
+        """Pilot run
+
+        Runs a number of simulations, and it calculates and saves the mean and
+        standard deviation of the summary statistics across simulations.
+        """
+        stats = []
+
+        if self.cached_pilot:
+            cached_pilot_path = self.dir_cache + 'cached_pilot_seed_{}.pkl'.format(self.seed)
+            d = shelve.open(cached_pilot_path)
+
+        for i in tqdm(range(self.pilot_samples)):
+            params = self.sim_prior()
+            hh_seed = self.gen_newseed()
+
+            key = self._hash(hh_seed, np.sum(params))
+
+            if self.cached_pilot and key in d:
+                states = d[key]
+            else:
+                hh = self.bm.HH(self.init, params.reshape(1, -1), seed=hh_seed)
+                states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
+                states = states.reshape(1, -1, 1)
+
+            stats.append(self.calc_summary_stats(states, skip_norm=True))
+
+            if self.cached_pilot and key not in d:
+                d[key] = states
+
+        if self.cached_pilot:
+            d.close()
+
+        stats = np.array(stats)
+        means = np.mean(stats, axis=0)
+        stds = np.std(stats, axis=0, ddof=1)
+
+        return means, stds
 
     def calc_summary_stats(self,
                            states,
@@ -472,42 +512,3 @@ class HHSimulator(SimulatorBase):
             sum_stats_vec /= self.pilot_stds
 
         return sum_stats_vec.reshape(1, -1)
-
-
-    def pilot_run(self):
-        """Pilot run
-
-        Runs a number of simulations, and it calculates and saves the mean and
-        standard deviation of the summary statistics across simulations.
-        """
-        stats = []
-
-        if self.cached_pilot:
-            cached_pilot_path = self.dir_cache + 'cached_pilot_seed_{}.pkl'.format(self.seed)
-            d = shelve.open(cached_pilot_path)
-
-        for i in tqdm(range(self.pilot_samples)):
-            params = self.sim_prior()
-            hh_seed = self.gen_newseed()
-
-            key = self._hash(hh_seed, np.sum(params))
-
-            if self.cached_pilot and key in d:
-                states = d[key]
-            else:
-                hh = self.bm.HH(self.init, params.reshape(1, -1), seed=hh_seed)
-                states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
-
-            stats.append(self.calc_summary_stats(states, skip_norm=True))
-
-            if self.cached_pilot and key not in d:
-                d[key] = states
-
-        if self.cached_pilot:
-            d.close()
-
-        stats = np.array(stats)
-        means = np.mean(stats, axis=0)
-        stds = np.std(stats, axis=0, ddof=1)
-
-        return means, stds
