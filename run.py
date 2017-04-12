@@ -13,6 +13,7 @@ import time
 
 from ast import literal_eval
 from likelihoodfree.Inference import Inference
+from subprocess import call
 
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
@@ -23,6 +24,10 @@ from likelihoodfree.Inference import Inference
               help='Device to compute on')
 @click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True,
               help='Use IW loss?')
+@click.option('--nb', default=False, is_flag=True,
+              help='If provided, will call nb.py after fitting')
+@click.option('--nb-flags', default=str,
+              help='If provided, will be passed to nb.py')
 @click.option('--pdb-iter', type=int, default=None,
               help='Number of iterations after which to debug')
 @click.option('--prior-alpha', type=float, default=0.25,
@@ -44,8 +49,8 @@ from likelihoodfree.Inference import Inference
               help='If True, will use true prior on all iterations')
 @click.option('--val', default=0,
               help='Number of samples for validation')
-def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
-        sim_kwargs, seed, svi, train_kwargs, true_prior, val):
+def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
+        prior_alpha, rep, sim_kwargs, seed, svi, train_kwargs, true_prior, val):
     """Run model
 
     Call `run.py` together with a prefix and a model to run.
@@ -70,8 +75,8 @@ def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
             return {}
         else:
             return dict((k, literal_eval(v)) for k, v in (pair.split('=') for pair in s.split()))
-    train_kwargs = string_to_kwargs(train_kwargs)
     sim_kwargs = string_to_kwargs(sim_kwargs)
+    train_kwargs = string_to_kwargs(train_kwargs)
 
     try:
         if model == 'gauss':
@@ -127,6 +132,9 @@ def run(model, prefix, debug, device, iw_loss, pdb_iter, prior_alpha, rep,
                           net=net,
                           postfix='iter_{}'.format(iteration),
                           **train_kwargs)
+
+        if nb:
+            call([sys.executable, 'nb.py', model, prefix] + nb_flags.split())
 
     except:
         t, v, tb = sys.exc_info()
