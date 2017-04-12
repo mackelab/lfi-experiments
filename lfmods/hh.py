@@ -331,8 +331,8 @@ class HHSimulator(SimulatorBase):
             d.close()
 
         stats = np.array(stats)
-        means = np.mean(stats, axis=0)
-        stds = np.std(stats, axis=0, ddof=1)
+        means = np.mean(stats, axis=0).reshape(-1)
+        stds = np.std(stats, axis=0, ddof=1).reshape(-1)
 
         return means, stds
 
