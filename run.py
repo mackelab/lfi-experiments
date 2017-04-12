@@ -135,7 +135,11 @@ def run(model, prefix, debug, device, iw_loss, nb, nb_flags, pdb_iter,
 
         if nb:
             print('Making plots')
-            call([sys.executable, 'nb.py', model, prefix] + nb_flags.split())
+            if debug:
+                debug_flag = ['--debug']
+            else:
+                debug_flag = []
+            call([sys.executable, 'nb.py', model, prefix] + nb_flags.split() + debug_flag)
 
     except:
         t, v, tb = sys.exc_info()
