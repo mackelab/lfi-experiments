@@ -81,8 +81,8 @@ class MoGSimulator(SimulatorBase):
         ----------
         x : n_samples x dim data
 
-        Return
-        ------
+        Returns
+        -------
         n_samples x dim summary stats
         """
         return x
@@ -96,8 +96,8 @@ class MoGSimulator(SimulatorBase):
         n_samples : int
             If greater than 1, generate multiple samples given theta
 
-        Return
-        ------
+        Returns
+        -------
         n_samples x dim data
         """
         assert theta.ndim == 1, 'theta.ndim must be 1'
