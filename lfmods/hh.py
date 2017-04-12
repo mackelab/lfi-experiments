@@ -246,7 +246,7 @@ class HHSimulator(SimulatorBase):
             else:
                 return self._pilot_stds
         else:
-            return 0.
+            return 1.
 
     def _hash(self, *args):
         """Hashing function to generate key for shelve dicts
