@@ -49,7 +49,7 @@ class GaussSimulator(SimulatorBase):
         self.x0_distrib = pdf.Gaussian(m=self.true_params, S=self.noise_cov,
                                        seed=self.gen_newseed())  # *1./N
         self.x0_sample = self.x0_distrib.gen(self.n_summary)
-        self.x0_sample_mean = np.mean(self.x0_sample)
+        self.x0_sample_mean = np.mean(self.x0_sample, axis=0)
 
     @lazyprop
     def obs(self):
@@ -83,13 +83,13 @@ class GaussSimulator(SimulatorBase):
 
         Parameters
         ----------
-        x : n_samples x dim data
+        x : n_samples x dim data x features (=self.dim)
 
         Returns
         -------
         n_samples x dim summary stats (=1)
         """
-        return np.mean(x, axis=1).reshape(-1, 1)
+        return np.mean(x, axis=1)
 
     def forward_model(self, theta, n_samples=1):
         """Given a mean parameter, simulates the likelihood
@@ -102,7 +102,7 @@ class GaussSimulator(SimulatorBase):
 
         Returns
         -------
-        n_samples(=1) x dim data
+        n_samples(=1) x dim data x features (= self.dim)
         """
         assert theta.ndim == 1, 'theta.ndim must be 1'
         assert theta.shape[0] == self.dim, 'theta.shape[0] must be dim theta long'
@@ -110,4 +110,4 @@ class GaussSimulator(SimulatorBase):
 
         samples = pdf.Gaussian(m=theta, S=self.noise_cov,
                                seed=self.gen_newseed()).gen(self.n_summary)
-        return samples.reshape(1, -1)
+        return samples[np.newaxis, :, :]
