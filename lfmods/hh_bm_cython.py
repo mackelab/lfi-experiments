@@ -26,5 +26,5 @@ class HH:
 		h = np.zeros_like(t)
 		p = np.zeros_like(t)
 
-		BiophysModel_cython_comp.computelf(t,I,V,m,n,h,p,tstep)
+		hh_bm_cython_comp.computelf(t,I,V,m,n,h,p,tstep)
 		return np.array(V).reshape(-1,1) + nois_fact_obs*self.rng.randn(t.shape[0],1)
