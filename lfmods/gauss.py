@@ -58,7 +58,7 @@ class GaussSimulator(SimulatorBase):
     @lazyprop
     def prior(self):
         self.prior_cov = 20.*np.eye(self.dim)
-        self.prior_mu = 0.
+        self.prior_mu = 0.*np.ones((self.dim,))
         return pdf.Gaussian(m=self.prior_mu, S=self.prior_cov,
                             seed=self.gen_newseed())
 
@@ -68,10 +68,12 @@ class GaussSimulator(SimulatorBase):
 
         Note that this assumes a Gaussian prior
         """
-        posterior_cov = (self.noise_cov*self.prior_cov)/(self.n_summary*self.prior_cov+self.noise_cov)
-        posterior_mu = posterior_cov*(self.prior_mu/self.prior_cov + self.n_summary*self.x0_sample_mean/self.noise_cov)
-
-        return pdf.Gaussian(m=posterior_mu, S=posterior_cov)
+        if self.dim == 1:
+            posterior_cov = (self.noise_cov*self.prior_cov)/(self.n_summary*self.prior_cov+self.noise_cov)
+            posterior_mu = posterior_cov*(self.prior_mu/self.prior_cov + self.n_summary*self.x0_sample_mean/self.noise_cov)
+            return pdf.Gaussian(m=posterior_mu, S=posterior_cov)
+        else:
+            raise ValueError('not implemented')
 
     @staticmethod
     def calc_summary_stats(x):
@@ -87,7 +89,7 @@ class GaussSimulator(SimulatorBase):
         -------
         n_samples x dim summary stats (=1)
         """
-        return np.mean(x, axis=0).reshape(-1, 1)
+        return np.mean(x, axis=1).reshape(-1, 1)
 
     def forward_model(self, theta, n_samples=1):
         """Given a mean parameter, simulates the likelihood
@@ -100,7 +102,7 @@ class GaussSimulator(SimulatorBase):
 
         Returns
         -------
-        n_samples x dim data
+        n_samples(=1) x dim data
         """
         assert theta.ndim == 1, 'theta.ndim must be 1'
         assert theta.shape[0] == self.dim, 'theta.shape[0] must be dim theta long'
@@ -108,4 +110,4 @@ class GaussSimulator(SimulatorBase):
 
         samples = pdf.Gaussian(m=theta, S=self.noise_cov,
                                seed=self.gen_newseed()).gen(self.n_summary)
-        return samples
+        return samples.reshape(1, -1)
