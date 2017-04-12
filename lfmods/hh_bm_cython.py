@@ -1,6 +1,6 @@
 import numpy as np
 
-import BiophysModel_cython_comp
+import hh_bm_cython_comp
 
 class HH:
     def __init__(self, init, params, seed=None):
