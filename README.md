@@ -64,12 +64,16 @@ Options:
                               will be drawn for those (last list element).
                               [default: 2000]
   --seed INTEGER              If provided, network and simulation are seeded
-  --sim-kwargs TEXT           If provided, will turned into dict and passed as
-                              kwargs to simulator.
+  --sim-kwargs TEXT           If provided, will be passed as keyword arguments
+                              to simulator. Seperate multiple keyword
+                              arguments by comma, for example: 'duration=500
+                              cython=True'.
   --svi                       If provided, will use SVI version  [default:
                               False]
-  --train-kwargs TEXT         If provided, will turned into dict and passed as
-                              kwargs to inference.train.
+  --train-kwargs TEXT         If provided, will be passed as keyword arguments
+                              to training function (inference.train). Seperate
+                              multiple keyword arguments by comma, for
+                              example: 'n_iter=500 n_minibatch=200'.
   --true-prior                If provided, will use true prior on all
                               iterations.  [default: False]
   --units LIST OF INTEGERS    List of integers such that each list element

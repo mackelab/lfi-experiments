@@ -65,13 +65,15 @@ will be drawn for those (last list element).')
 @click.option('--seed', type=int, default=None, show_default=True,
               help='If provided, network and simulation are seeded')
 @click.option('--sim-kwargs', type=str, default=None, show_default=True,
-              help='If provided, will turned into dict and passed as kwargs to \
-simulator.')
+              help='If provided, will be passed as keyword arguments \
+to simulator. Seperate multiple keyword arguments by comma, for example:\
+ \'duration=500 cython=True\'.')
 @click.option('--svi', default=False, is_flag=True, show_default=True,
               help='If provided, will use SVI version')
 @click.option('--train-kwargs', type=str, default=None, show_default=True,
-              help='If provided, will turned into dict and passed as kwargs to \
-inference.train.')
+              help='If provided, will be passed as keyword arguments \
+to training function (inference.train). Seperate multiple keyword arguments \
+by comma, for example: \'n_iter=500 n_minibatch=200\'.')
 @click.option('--true-prior', default=False, is_flag=True, show_default=True,
               help='If provided, will use true prior on all iterations.')
 @click.option('--units', type=ListIntParamType(), default=[50], show_default=True,
