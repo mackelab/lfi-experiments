@@ -43,8 +43,6 @@ Options:
                               [default: False]
   --nb                        If provided, will call nb.py after fitting.
                               [default: False]
-  --nb-flags TEXT             If provided, will be passed to nb.py.  [default:
-                              ]
   --pdb-iter INTEGER          Number of iterations after which to debug.
   --prior-alpha FLOAT         If provided, will use alpha as weight for true
                               prior in proposal distribution (only used if
