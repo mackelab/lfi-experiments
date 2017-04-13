@@ -68,12 +68,13 @@ class GaussSimulator(SimulatorBase):
 
         Note that this assumes a Gaussian prior
         """
-        if self.dim == 1:
+        if self.dim == 1:  # TODO: remove
             posterior_cov = (self.noise_cov*self.prior_cov)/(self.n_summary*self.prior_cov+self.noise_cov)
             posterior_mu = posterior_cov*(self.prior_mu/self.prior_cov + self.n_summary*self.x0_sample_mean/self.noise_cov)
-            return pdf.Gaussian(m=posterior_mu, S=posterior_cov)
         else:
-            raise ValueError('not implemented')
+            posterior_cov = np.linalg.inv(np.linalg.inv(self.prior_cov)+self.n_summary*np.linalg.inv(self.noise_cov))
+            posterior_mu = np.dot(posterior_cov, (self.n_summary*np.dot(np.linalg.inv(self.noise_cov), self.x0_sample_mean)+np.dot(np.linalg.inv(self.prior_cov), self.prior_mu)))
+        return pdf.Gaussian(m=posterior_mu, S=posterior_cov)
 
     @staticmethod
     def calc_summary_stats(x):
