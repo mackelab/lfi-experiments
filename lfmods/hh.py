@@ -104,7 +104,7 @@ class HHSimulator(SimulatorBase):
 
         # true parameters
         self.true_params = np.array([50., 5., 0.1, 50., 90., 70., 0.07, 6e2,
-                                     0.5, 40., 60., 0.2])
+                                     0.5, 40., 60., 0.5])
         self.labels_params = ['g_Na', 'g_K', 'g_l', 'E_Na', '-E_K', '-E_l',
                               'g_M', 't_max', 'k_b_n1', 'k_b_n2', 'V_T', 'noise']
         self.labels_params = self.labels_params[0:len(self.true_params)]
