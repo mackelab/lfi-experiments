@@ -15,18 +15,33 @@ import time
 from ast import literal_eval
 from likelihoodfree.Inference import Inference
 
+class ListIntParamType(click.ParamType):
+    name = 'list of integers'
+    def convert(self, value, param, ctx):
+        try:
+            if type(value) == list:
+                return value
+            elif type(value) == int:
+                return [value]
+            elif type(value) == str:
+                return [int(i) for i in value.replace('[','').replace(']','').replace(' ','').split(',')]
+            else:
+                raise ValueError
+        except ValueError:
+            self.fail('%s is not a valid input' % value, param, ctx)
+
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
 @click.option('--enqueue', default=False, is_flag=True, show_default=True,
-              help='Enqueue job rather than running it now. This requires a \
+              help='Enqueue the job rather than running it now. This requires a \
 running worker process, which can be started with worker.py')
-@click.option('--debug/--no-debug', default=False, is_flag=True, show_default=True,
-              help='If True, will enter debugger on error.')
+@click.option('--debug', default=False, is_flag=True, show_default=True,
+              help='If provided, will enter debugger on error.')
 @click.option('--device', default='cpu', show_default=True,
               help='Device to compute on.')
-@click.option('--iw-loss/--no-iw-loss', default=False, is_flag=True, show_default=True,
-              help='Use IW loss?')
+@click.option('--iw-loss', default=False, is_flag=True, show_default=True,
+              help='If provided, will use importance weighted loss.')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
 @click.option('--nb-flags', type=str, default='', show_default=True,
@@ -36,35 +51,40 @@ running worker process, which can be started with worker.py')
 @click.option('--prior-alpha', type=float, default=0.25, show_default=True,
               help='If provided, will use alpha as weight for true prior in \
 proposal distribution (only used if iw_loss is True).')
-@click.option('--rep', type=str, default='2,1', show_default=True,
+@click.option('--rep', type=ListIntParamType(), default=[2,1], show_default=True,
               help='Specify the number of repetitions per n_components model, \
 seperation by comma. For instance, \'2,1\' would mean that 2 itertions with \
 1 component are run, and 1 iteration with 2 components are run.')
 @click.option('--rnn', type=int, default=None, show_default=True,
-              help='If specified, will use many-to-one RNN with specified number of hidden units instead of summary statistics.')
-@click.option('--samples', default='500,2000', type=str, show_default=True,
+              help='If specified, will use many-to-one RNN with specified \
+number of hidden units instead of summary statistics.')
+@click.option('--samples', default='2000', type=ListIntParamType(), show_default=True,
               help='Number of samples, provided as either a single number or \
-as a comma seperated list. If a list is provided, say \'500,2000\', \
-500 samples are drawn for the first iteration, and 2000 samples for the second \
-iteration. If more iterations are run, 2000 samples will be drawn (last list \
-element).')
+as a comma seperated list. If a list is provided, say \'1000,2000\', \
+1000 samples are drawn for the first iteration, and 2000 samples for the second \
+iteration. If more iterations than elements in the list are run, 2000 samples \
+will be drawn for those (last list element).')
 @click.option('--seed', type=int, default=None, show_default=True,
               help='If provided, network and simulation are seeded')
 @click.option('--sim-kwargs', type=str, default=None, show_default=True,
               help='If provided, will turned into dict and passed as kwargs to \
 simulator.')
-@click.option('--svi/--no-svi', default=False, is_flag=True, show_default=True,
-              help='Use SVI version?')
+@click.option('--svi', default=False, is_flag=True, show_default=True,
+              help='If provided, will use SVI version')
 @click.option('--train-kwargs', type=str, default=None, show_default=True,
               help='If provided, will turned into dict and passed as kwargs to \
 inference.train.')
 @click.option('--true-prior', default=False, is_flag=True, show_default=True,
-              help='If True, will use true prior on all iterations.')
-@click.option('--val', default=0, show_default=True,
+              help='If provided, will use true prior on all iterations.')
+@click.option('--units', type=ListIntParamType(), default=[50], show_default=True,
+              help='List of integers such that each list element specifies \
+the number of units per fully connected hidden layer. The length of the list \
+equals the number of hidden layers.')
+@click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
 def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
         prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
-        true_prior, val):
+        true_prior, units, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -118,10 +138,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
         n_components = 0
         n_samples = []
 
-        samples = [int(s) for s in samples.split(',')]
-        reps = [int(r) for r in rep.split(',')]
-
-        for r in reps:
+        for r in rep:
             n_components += 1
             for i in range(r):
                 iteration += 1
@@ -130,6 +147,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
                 if not created:
                     net, props = lfi.net_create(iw_loss=iw_loss,
                                                 n_components=n_components,
+                                                n_hiddens=units,
                                                 svi=svi,
                                                 rnn_hiddens=rnn)
                     created = True
