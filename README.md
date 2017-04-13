@@ -41,6 +41,9 @@ Options:
   --device TEXT               Device to compute on.  [default: cpu]
   --iw-loss                   If provided, will use importance weighted loss.
                               [default: False]
+  --loss-calib FLOAT          If provided, will do loss calibration with
+                              Gaussian kernel centered on x0. The variance of
+                              the kernel is determined by the float provided.
   --nb                        If provided, will call nb.py after fitting.
                               [default: False]
   --no-browser                If provided, will not open plots of nb.py in

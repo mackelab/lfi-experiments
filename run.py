@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import click
 import likelihoodfree.io as io
+import likelihoodfree.PDF as pdf
 import numpy as np
 import os
 import pdb
@@ -42,6 +43,9 @@ running worker process, which can be started with worker.py')
               help='Device to compute on.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
+@click.option('--loss-calib', type=float, default=None, show_default=True,
+              help='If provided, will do loss calibration with Gaussian kernel \
+centered on x0. The variance of the kernel is determined by the float provided.')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
 @click.option('--no-browser', default=False, is_flag=True, show_default=True,
@@ -84,8 +88,8 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, enqueue, debug, device, iw_loss, nb, no_browser, pdb_iter,
-        prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
+def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_browser,
+        pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
         true_prior, units, val):
     """Run model
 
@@ -145,6 +149,11 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, no_browser, pdb_iter
         n_components = 0
         n_samples = []
 
+        if loss_calib is not None:
+            loss_calib_pdf = pdf.Gaussian(m=sim.obs, S=loss_calib*np.eye(len(sim.obs)))
+        else:
+            loss_calib_pdf = None
+
         for r in rep:
             n_components += 1
             for i in range(r):
@@ -153,6 +162,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, no_browser, pdb_iter
 
                 if not created:
                     net, props = lfi.net_create(iw_loss=iw_loss,
+                                                loss_calib=loss_calib_pdf,
                                                 n_components=n_components,
                                                 n_hiddens=units,
                                                 svi=svi,
