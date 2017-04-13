@@ -31,7 +31,7 @@ class ListIntParamType(click.ParamType):
             self.fail('%s is not a valid input' % value, param, ctx)
 
 @click.command()
-@click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
+@click.argument('model', type=click.Choice(['gauss', 'hh', 'mog', 'glm']))
 @click.argument('prefix', type=str)
 @click.option('--enqueue', default=False, is_flag=True, show_default=True,
               help='Enqueue the job rather than running it now. This requires a \
@@ -122,6 +122,11 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, pdb_iter,
                 sim_kwargs['summary_stats'] = 0
         elif model == 'mog':
             from lfmods.mog import MoGSimulator as Simulator
+        elif model == 'glm':
+            from lfmods.glm import GLMSimulator as Simulator
+            if rnn is not None:
+                sim_kwargs['pilot_samples'] = 0
+                sim_kwargs['summary_stats'] = 0
         else:
             raise ValueError('could not import Simulator')
 
