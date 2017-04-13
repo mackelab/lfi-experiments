@@ -1,6 +1,6 @@
 #/bin/sh
 
-COMMON='--samples 2000 --seed 1 --nb --nb-flags --no-jupyter'
+COMMON='--samples 2000 --seed 1 --nb --no-browser'
 
 cd ..
 python run.py gauss testd1 ${COMMON}

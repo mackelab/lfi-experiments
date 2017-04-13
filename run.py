@@ -44,6 +44,8 @@ running worker process, which can be started with worker.py')
               help='If provided, will use importance weighted loss.')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
+@click.option('--no-browser', default=False, is_flag=True, show_default=True,
+              help='If provided, will not open plots of nb.py in browser.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
 @click.option('--prior-alpha', type=float, default=0.25, show_default=True,
@@ -82,7 +84,7 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, enqueue, debug, device, iw_loss, nb, pdb_iter,
+def run(model, prefix, enqueue, debug, device, iw_loss, nb, no_browser, pdb_iter,
         prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
         true_prior, units, val):
     """Run model
@@ -191,7 +193,11 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, pdb_iter,
                 debug_flag = ['--debug']
             else:
                 debug_flag = []
-            subprocess.call([sys.executable, 'nb.py', model, prefix] + debug_flag)
+            if no_browser:
+                browser_flag = ['--no-browser']
+            else:
+                browser_flag = []
+            subprocess.call([sys.executable, 'nb.py', model, prefix] + debug_flag + browser_flag)
 
     except:
         t, v, tb = sys.exc_info()

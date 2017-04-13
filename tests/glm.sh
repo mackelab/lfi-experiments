@@ -1,6 +1,6 @@
 #/bin/sh
 
-COMMON='--seed 1 --samples 2000 --nb --no-jupyter'
+COMMON='--seed 1 --samples 2000 --nb --no-browser'
 
 cd ..
 python run.py glm testc1 --rep 2 ${COMMON}

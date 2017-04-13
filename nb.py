@@ -59,8 +59,8 @@ def export_notebook_to_html(nb, notebook_filename_out):
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
-@click.option('--autoraise/--no-autoraise', default=True, is_flag=True,
-              help='If True, will raise browser window when ready')
+@click.option('--browser/--no-browser', default=True, is_flag=True,
+              help='If True, will open results HTML or notebook in browser')
 @click.option('--debug/--no-debug', default=False, is_flag=True,
               help='If True, will enter debugger on error')
 @click.option('--jupyter/--no-jupyter', default=True, is_flag=True,
@@ -69,12 +69,9 @@ def export_notebook_to_html(nb, notebook_filename_out):
               help='Jupyter port')
 @click.option('--nb', type=str, default='viz',
               help='Will use notebooks/model_$nb.ipynb, where $nb defaults to viz')
-@click.option('--open', type=bool, default=True, is_flag=True,
-              help='If True, will try to open HTML notebook')
 @click.option('--postfix', type=str, default=None,
               help='Postfix')
-def run(model, prefix, autoraise, debug, nb, jupyter, jupyter_port, open,
-        postfix):
+def run(model, prefix, browser, debug, jupyter, jupyter_port, nb, postfix):
     """Generate notebook and HTML output
 
     Call `nb.py` together with a prefix and a model to run.
@@ -106,7 +103,8 @@ def run(model, prefix, autoraise, debug, nb, jupyter, jupyter_port, open,
                           'basepath': '../'},
                          run_path=dirs['dir_nb'])
 
-        webbrowser.open(url, autoraise=autoraise, new=True)
+        if browser:
+            webbrowser.open(url, autoraise=True, new=True)
     except:
         t, v, tb = sys.exc_info()
         if debug:

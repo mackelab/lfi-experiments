@@ -1,6 +1,6 @@
 #/bin/sh
 
-COMMON='--seed 1 --nb --nb-flags --no-jupyter'
+COMMON='--seed 1 --nb --no-browser'
 
 cd ..
 python run.py hh testc1 --rep 2 ${COMMON}

@@ -43,6 +43,8 @@ Options:
                               [default: False]
   --nb                        If provided, will call nb.py after fitting.
                               [default: False]
+  --no-browser                If provided, will not open plots of nb.py in
+                              browser.  [default: False]
   --pdb-iter INTEGER          Number of iterations after which to debug.
   --prior-alpha FLOAT         If provided, will use alpha as weight for true
                               prior in proposal distribution (only used if
