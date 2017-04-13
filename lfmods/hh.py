@@ -2,8 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import likelihoodfree.PDF as pdf
 import likelihoodfree.io as io
+import likelihoodfree.PDF as pdf
 import numpy as np
 import os
 import pdb

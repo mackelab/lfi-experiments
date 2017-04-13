@@ -2,8 +2,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import likelihoodfree.PDF as pdf
+import lfmods.glm_bm as bm
 import likelihoodfree.io as io
+import likelihoodfree.PDF as pdf
 import numpy as np
 import os
 import pdb
@@ -66,7 +67,6 @@ class GLMSimulator(SimulatorBase):
         self.summary_stats = summary_stats
         self.verbose = verbose
 
-        import lfmods.glm_bm as bm
         self.bm = bm
 
         if pilot_samples > 0:
