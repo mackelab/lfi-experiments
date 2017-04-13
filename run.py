@@ -14,8 +14,6 @@ import time
 
 from ast import literal_eval
 from likelihoodfree.Inference import Inference
-from redis import Redis
-from rq import Queue
 
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
@@ -31,7 +29,7 @@ running worker process, which can be started with worker.py')
               help='Use IW loss?')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
-@click.option('--nb-flags', type=str, default=None, show_default=True,
+@click.option('--nb-flags', type=str, default='', show_default=True,
               help='If provided, will be passed to nb.py.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
@@ -185,6 +183,9 @@ def run(model, prefix, enqueue, debug, device, iw_loss, nb, nb_flags, pdb_iter,
 if __name__ == '__main__':
     args = sys.argv
     if '--enqueue' in args:
+        from redis import Redis
+        from rq import Queue
+
         timeout = int(1e6)
         ttl = -1
         connection = Redis()
