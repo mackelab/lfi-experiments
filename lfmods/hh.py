@@ -399,7 +399,7 @@ class HHSimulator(SimulatorBase):
             len_x_on_off = x_on_off.shape[0]
             x_corr_val = np.correlate(x_on_off,x_on_off,'valid')
             x_corr_full = np.correlate(x_on_off,x_on_off,'full')
-            xcorr_steps = np.linspace(len_x_on_off-1+0.1/dt,len_x_on_off-1+self.n_xcorr*0.1/dt,self.n_xcorr).astype(int)
+            xcorr_steps = np.linspace(len_x_on_off-1+0.1/self.dt,len_x_on_off-1+self.n_xcorr*0.1/self.dt,self.n_xcorr).astype(int)
             x_corr1 = x_corr_full[xcorr_steps]/x_corr_val
 
             moments = spstats.moment(x[(self.t > self.t_on) & (self.t < self.t_off)], np.linspace(2,self.n_mom+1,self.n_mom))
