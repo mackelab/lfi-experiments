@@ -150,7 +150,8 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
         n_samples = []
 
         if loss_calib is not None:
-            loss_calib_pdf = pdf.Gaussian(m=sim.obs, S=loss_calib*np.eye(len(sim.obs)))
+            loss_calib_pdf_mean = sim.obs.reshape(-1)
+            loss_calib_pdf = pdf.Gaussian(m=loss_calib_pdf_mean, S=loss_calib*np.eye(len(loss_calib_pdf_mean)))
         else:
             loss_calib_pdf = None
 
