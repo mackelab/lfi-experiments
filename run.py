@@ -14,7 +14,6 @@ import sys
 import time
 
 from ast import literal_eval
-from likelihoodfree.Inference import Inference
 
 class ListIntParamType(click.ParamType):
     name = 'list of integers'
@@ -39,7 +38,7 @@ class ListIntParamType(click.ParamType):
 running worker process, which can be started with worker.py')
 @click.option('--debug', default=False, is_flag=True, show_default=True,
               help='If provided, will enter debugger on error.')
-@click.option('--device', default='cpu', show_default=True,
+@click.option('--device', default='cpu', type=str, show_default=True,
               help='Device to compute on.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
@@ -98,8 +97,11 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
     See run.py --help for info on parameters.
     """
     # set env variables
-    os.environ["THEANO_FLAGS"] = "device=" + device + ",floatX=float32,lib.cnmem=0.8"
+    os.environ["THEANO_FLAGS"] = "device=" + device + ",floatX=float32"
 
+    # import modules and functions depending on theano after setting env
+    from likelihoodfree.Inference import Inference
+    
     # check for subfolders, create if they don't exist
     dirs = {}
     dirs['dir_data'] = 'results/'+model+'/data/'
