@@ -396,13 +396,13 @@ class HHSimulator(SimulatorBase):
 
             # auto-correlations
             x_on_off = x[(self.t > self.t_on) & (self.t < self.t_off)]-np.mean(x[(self.t > self.t_on) & (self.t < self.t_off)])
-            x_corr_val = np.correlate(x_on_off,x_on_off,'valid')
+            x_corr_val = np.dot(x_on_off,x_on_off)
 
             xcorr_steps = np.linspace(0.1/self.dt,self.n_xcorr*0.1/self.dt,self.n_xcorr).astype(int)
             x_corr_full = np.zeros(self.n_xcorr)
             for ii in range(self.n_xcorr):
                 x_on_off_part = np.concatenate((x_on_off[xcorr_steps[ii]:],np.zeros(xcorr_steps[ii])))
-                x_corr_full[ii] = np.correlate(x_on_off,x_on_off_part,'valid')
+                x_corr_full[ii] = np.dot(x_on_off,x_on_off_part)
 
             x_corr1 = x_corr_full/x_corr_val
 
