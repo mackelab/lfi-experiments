@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Worker for jobs
 """
-import argparse
+import click
 import os
 import subprocess
 
@@ -11,20 +11,18 @@ from rq import Worker, Queue, Connection
 def subprocs_exec(args):
     subprocess.call(args, shell=False)
 
-connection = Redis()
 
-if __name__ == '__main__':
+@click.command()
+@click.option('--queue', type=str, default='default', show_default=True,
+              help='Queue to listen on')
+def run(queue):
+    connection = Redis()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--queue', help='Queue to listen on')
-
-    args = parser.parse_args()
-
-    listen = ['default']
-
-    if args.queue is not None:
-        listen = [args.queue]
+    listen = ['all', queue]
 
     with Connection(connection):
         worker = Worker(map(Queue, listen))
         worker.work()
+
+if __name__ == '__main__':
+    run()
