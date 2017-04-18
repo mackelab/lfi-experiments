@@ -97,6 +97,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
     See run.py --help for info on parameters.
     """
     # set env variables
+    device = device.replace("gpu", "cuda")
     os.environ["THEANO_FLAGS"] = "device=" + device + ",floatX=float32"
 
     # import modules and functions depending on theano after setting env
