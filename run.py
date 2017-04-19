@@ -33,9 +33,9 @@ class ListIntParamType(click.ParamType):
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'glm', 'hh', 'mog']))
 @click.argument('prefix', type=str)
-@click.option('--enqueue', default=False, is_flag=True, show_default=True,
-              help='Enqueue the job rather than running it now. This requires a \
-running worker process, which can be started with worker.py')
+@click.option('--enqueue', default=None, type=str, show_default=True,
+              help='Enqueue the job to a given queue instead of running it now. \
+This requires a running worker process, which can be started with worker.py')
 @click.option('--debug', default=False, is_flag=True, show_default=True,
               help='If provided, will enter debugger on error.')
 @click.option('--device', default='cpu', type=str, show_default=True,
@@ -52,8 +52,8 @@ centered on x0. The variance of the kernel is determined by the float provided.'
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
 @click.option('--prior-alpha', type=float, default=0.25, show_default=True,
-              help='If provided, will use alpha as weight for true prior in \
-proposal distribution (only used if iw_loss is True).')
+              help='If iw_loss is True, will use this alpha as weight for true \
+prior in proposal distribution.')
 @click.option('--rep', type=ListIntParamType(), default=[2,1], show_default=True,
               help='Specify the number of repetitions per n_components model, \
 seperation by comma. For instance, \'2,1\' would mean that 2 itertions with \
@@ -72,7 +72,7 @@ will be drawn for those (last list element).')
 @click.option('--sim-kwargs', type=str, default=None, show_default=True,
               help='If provided, will be passed as keyword arguments \
 to simulator. Seperate multiple keyword arguments by comma, for example:\
- \'duration=500 cython=True\'.')
+ \'duration=500,cython=True\'.')
 @click.option('--svi', default=False, is_flag=True, show_default=True,
               help='If provided, will use SVI version')
 @click.option('--train-kwargs', type=str, default=None, show_default=True,
@@ -102,7 +102,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
 
     # import modules and functions depending on theano after setting env
     from likelihoodfree.Inference import Inference
-    
+
     # check for subfolders, create if they don't exist
     dirs = {}
     dirs['dir_data'] = 'results/'+model+'/data/'
@@ -224,26 +224,35 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
             raise v.with_traceback(tb)
 
 if __name__ == '__main__':
-    args = sys.argv
-    if '--enqueue' in args:
+    func_args = [sys.executable] + sys.argv
+
+    try:
+        enqueue_idx = func_args.index('--enqueue')
+
         from redis import Redis
         from rq import Queue
 
         timeout = int(1e6)
         ttl = -1
         connection = Redis()
-        queue  = Queue('default', connection=connection)
 
-        func_args = [sys.executable] + sys.argv
-        func_args.remove('--enqueue')
+        try:
+            queue  = Queue(func_args[enqueue_idx+1], connection=connection)
+        except:
+            raise ValueError('--enqueue requires specification of queue')
+
+        func_args.pop(enqueue_idx+1)
+        func_args.pop(enqueue_idx)
 
         def subprocs_exec(args):
             subprocess.call(args, shell=False)
+
 
         queue.enqueue_call(func=subprocs_exec,
                            args=(func_args,),
                            timeout=timeout, ttl=ttl,
                            result_ttl=ttl)
-        print('job enqueued')
-    else:
+        print('job enqueued : {}'.format(" ".join(func_args)))
+
+    except ValueError:
         run()
