@@ -1,4 +1,5 @@
 # Project specific
+experiments/
 results/data/*
 results/figs/*
 results/nets/*
