@@ -164,6 +164,10 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
                 iteration += 1
                 print('Iteration {}; {} Component(s)'.format(iteration, n_components))
 
+                if not iw_loss and n_components > 1 and iteration > 1 and not true_prior:
+                    print('Run skipped!')
+                    continue
+
                 if not created:
                     net, props = lfi.net_create(iw_loss=iw_loss,
                                                 loss_calib=loss_calib_pdf,
