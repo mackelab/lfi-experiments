@@ -117,7 +117,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
         if s is None:
             return {}
         else:
-            return dict((k, literal_eval(v)) for k, v in (pair.split('=') for pair in s.split()))
+            return dict((k, literal_eval(v)) for k, v in (pair.split('=') for pair in s.split(',')))
     sim_kwargs = string_to_kwargs(sim_kwargs)
     train_kwargs = string_to_kwargs(train_kwargs)
 
@@ -163,6 +163,10 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
             for i in range(r):
                 iteration += 1
                 print('Iteration {}; {} Component(s)'.format(iteration, n_components))
+
+                if not iw_loss and n_components > 1 and iteration > 1+rep[0] and not true_prior:
+                    print('Run skipped!')
+                    continue
 
                 if not created:
                     net, props = lfi.net_create(iw_loss=iw_loss,
