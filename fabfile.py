@@ -8,7 +8,7 @@ import yaml
 from fabric.api import local, run, task, warn_only
 from sklearn.model_selection import ParameterGrid, ParameterSampler
 
-CPUS_DEFAULT = 20
+CPUS_DEFAULT = 18
 GPUS_DEFAULT = 2
 TMUX_SESSION = 'lf'
 
@@ -131,6 +131,9 @@ def run(name, limit=None):
             elif 'loss-calib' in k:
                 if float(v) > 0.:
                     cmd += ' --loss-calib ' + str(v)
+            elif 'rnn' in k:
+                if int(v) > 0:
+                    cmd += ' --rnn ' + str(v)
             elif 'iw-loss' in k:
                 if v:
                     cmd += ' --iw-loss'
@@ -150,7 +153,7 @@ def run(name, limit=None):
             cmd += ' --sim-kwargs ' + sim_kwargs[1:]
 
         device = 'cpu'
-        if 'rnn' in li and int(li[rnn]) != 0:
+        if 'rnn' in li and int(li['rnn']) != 0:
             device = 'gpu'
             cmd += ' --device cuda0'
 
