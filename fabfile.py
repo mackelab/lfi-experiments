@@ -110,18 +110,24 @@ def run(name, limit=None):
         for k, v in li.items():
             if 1 == 2:
                 pass
-            elif 'bimodal' in k and model in ['mog']:
-                sim_kwargs += ',cython=' + str(v)
-            elif 'cython' in k and model in ['hh']:
-                sim_kwargs += ',cython=' + str(v)
-            elif 'dim' in k and model in ['glm', 'hh']:
-                sim_kwargs += ',dim=' + str(v)
-            elif 'n-summary' in k and model in ['gauss']:
-                sim_kwargs += ',n_summary=' + str(v)
-            elif 'duration' in k and model in ['glm', 'hh']:
-                sim_kwargs += ',duration=' + str(v)
-            elif 'step-current' in k and model in ['hh']:
-                sim_kwargs += ',step_current=' + str(v)
+            elif 'bimodal' in k:
+                if model in ['mog']:
+                    sim_kwargs += ',cython=' + str(v)
+            elif 'cython' in k:
+                if model in ['hh']:
+                    sim_kwargs += ',cython=' + str(v)
+            elif 'dim' in k:
+                if model in ['gauss', 'mog']:
+                    sim_kwargs += ',dim=' + str(v)
+            elif 'n-summary' in k:
+                if model in ['gauss']:
+                    sim_kwargs += ',n_summary=' + str(v)
+            elif 'duration' in k:
+                if model in ['glm', 'hh']:
+                    sim_kwargs += ',duration=' + str(v)
+            elif 'step-current' in k:
+                if model in ['hh']:
+                    sim_kwargs += ',step_current=' + str(v)
             elif 'loss-calib' in k:
                 if float(v) > 0.:
                     cmd += ' --loss-calib ' + str(v)
