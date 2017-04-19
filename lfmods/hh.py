@@ -512,7 +512,7 @@ class HHSimulator(SimulatorBase):
 
         if np.isnan(sum_stats_vec).any():
             print(sum_stats_vec)
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
 
         # pilot run normalization
         if not skip_norm and self.pilot_norm:

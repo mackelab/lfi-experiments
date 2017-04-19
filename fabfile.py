@@ -50,6 +50,7 @@ def dryrun():
 def info():
     local('nvidia-smi')
     local('rq info')
+    local("awk '{print $1,$2,$3}' /proc/loadavg")
 
 @task(alias='k')
 def kill(sess=TMUX_SESSION):
