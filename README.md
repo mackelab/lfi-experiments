@@ -33,9 +33,9 @@ Usage: run.py [OPTIONS] MODEL PREFIX
   See run.py --help for info on parameters.
 
 Options:
-  --enqueue                   Enqueue the job rather than running it now. This
-                              requires a running worker process, which can be
-                              started with worker.py  [default: False]
+  --enqueue TEXT              Enqueue the job to a given queue instead of
+                              running it now. This requires a running worker
+                              process, which can be started with worker.py
   --debug                     If provided, will enter debugger on error.
                               [default: False]
   --device TEXT               Device to compute on.  [default: cpu]
@@ -49,9 +49,9 @@ Options:
   --no-browser                If provided, will not open plots of nb.py in
                               browser.  [default: False]
   --pdb-iter INTEGER          Number of iterations after which to debug.
-  --prior-alpha FLOAT         If provided, will use alpha as weight for true
-                              prior in proposal distribution (only used if
-                              iw_loss is True).  [default: 0.25]
+  --prior-alpha FLOAT         If iw_loss is True, will use this alpha as
+                              weight for true prior in proposal distribution.
+                              [default: 0.25]
   --rep LIST OF INTEGERS      Specify the number of repetitions per
                               n_components model, seperation by comma. For
                               instance, '2,1' would mean that 2 itertions with
@@ -71,8 +71,8 @@ Options:
   --seed INTEGER              If provided, network and simulation are seeded
   --sim-kwargs TEXT           If provided, will be passed as keyword arguments
                               to simulator. Seperate multiple keyword
-                              arguments by comma, for example: 'duration=500
-                              cython=True'.
+                              arguments by comma, for example:
+                              'duration=500,cython=True'.
   --svi                       If provided, will use SVI version  [default:
                               False]
   --train-kwargs TEXT         If provided, will be passed as keyword arguments
