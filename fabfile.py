@@ -63,7 +63,7 @@ def list_windows(name='dashboard'):
     tmux_window_list(echo=True)
 
 @task(alias='r')
-def run(name, limit=None):
+def run(name, device=None, limit=None):
     limit = parse_limit(limit)
 
     y = yaml_parse('experiments/' + name +'.yaml')
@@ -152,10 +152,11 @@ def run(name, limit=None):
         if sim_kwargs != '':
             cmd += ' --sim-kwargs ' + sim_kwargs[1:]
 
-        device = 'cpu'
-        if 'rnn' in li and int(li['rnn']) != 0:
-            device = 'gpu'
-            cmd += ' --device cuda0'
+        if device is None:
+            device = 'cpu'
+            if 'rnn' in li and int(li['rnn']) != 0:
+                device = 'gpu'
+                cmd += ' --device cuda0'
 
         cmd += ' --enqueue {d}'.format(d=device)
 
