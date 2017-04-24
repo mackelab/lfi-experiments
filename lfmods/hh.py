@@ -209,6 +209,7 @@ class HHSimulator(SimulatorBase):
 
             stats = self.calc_summary_stats(states)
 
+        self.obs_trace = states
         return stats
 
     @lazyprop
