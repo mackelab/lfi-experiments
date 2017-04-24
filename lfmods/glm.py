@@ -23,6 +23,7 @@ class GLMSimulator(SimulatorBase):
                  duration=100,
                  pilot_samples=1000,
                  seed=None,
+                 seed_obs=None,
                  summary_stats=1,
                  verbose=False):
         """GLM simulator
@@ -42,6 +43,9 @@ class GLMSimulator(SimulatorBase):
             of summary statistics
         seed : int or None
             If set, randomness across runs is disabled
+        seed_obs : int or None
+            If set, randomness of obs is controlled independently of seed.
+            Important: If only `seed` is set, `obs` is not random
         summary_stats : int
             Serves as a switch to change between different ways to calculate
             summary statistics:
@@ -58,6 +62,7 @@ class GLMSimulator(SimulatorBase):
         prior_max
         """
         super().__init__(seed=seed)
+        self.seed_obs = seed_obs
 
         self.cached_pilot = cached_pilot
         self.cached_sims = cached_sims
@@ -116,9 +121,15 @@ class GLMSimulator(SimulatorBase):
 
     @lazyprop
     def obs(self):
+        # seed for observed data
+        if self.seed_obs is None:
+            seed = self.gen_newseed()
+        else:
+            seed = self.seed_obs
+
         # generate observed data from simulation
         glm = self.bm.GLM(self.true_params.reshape(1, -1),
-                        seed=self.gen_newseed())
+                        seed=seed)
         states = glm.sim_time(self.t, self.I).reshape(1, -1, 1)
         stats = self.calc_summary_stats(states)
 
