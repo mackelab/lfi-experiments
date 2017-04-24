@@ -110,6 +110,9 @@ class GaussSimulator(SimulatorBase):
     def forward_model(self, theta, n_samples=1):
         """Given a mean parameter, simulates the likelihood
 
+        # TODO: use n_samples parameter to generate multiple samples,
+        will be clearer
+
         Parameters
         ----------
         theta : 1 x dim theta
