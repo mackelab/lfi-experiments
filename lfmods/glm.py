@@ -122,6 +122,7 @@ class GLMSimulator(SimulatorBase):
         states = glm.sim_time(self.t, self.I).reshape(1, -1, 1)
         stats = self.calc_summary_stats(states)
 
+        self.obs_trace = states
         return stats
 
     @lazyprop
