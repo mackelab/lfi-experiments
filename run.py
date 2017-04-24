@@ -51,7 +51,7 @@ centered on x0. The variance of the kernel is determined by the float provided.'
               help='If provided, will not open plots of nb.py in browser.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
-@click.option('--prior-alpha', type=float, default=0.25, show_default=True,
+@click.option('--prior-alpha', type=float, default=0.20, show_default=True,
               help='If iw_loss is True, will use this alpha as weight for true \
 prior in proposal distribution.')
 @click.option('--rep', type=ListIntParamType(), default=[2,1], show_default=True,
@@ -78,7 +78,7 @@ to simulator. Seperate multiple keyword arguments by comma, for example:\
 @click.option('--train-kwargs', type=str, default=None, show_default=True,
               help='If provided, will be passed as keyword arguments \
 to training function (inference.train). Seperate multiple keyword arguments \
-by comma, for example: \'n_iter=500 n_minibatch=200\'.')
+by comma, for example: \'n_iter=500,n_minibatch=200\'.')
 @click.option('--true-prior', default=False, is_flag=True, show_default=True,
               help='If provided, will use true prior on all iterations.')
 @click.option('--units', type=ListIntParamType(), default=[50], show_default=True,

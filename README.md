@@ -3,10 +3,9 @@
 ## Install and update
 
 - Clone this repository, `cd` into it
-- Run `python setup.py develop`
+- Run `make install`
 - Just `git pull` to update codebase; it's not necessary to run the setup again,
   since it's linked symbolically
-
 
 ## Usage
 
@@ -78,7 +77,7 @@ Options:
   --train-kwargs TEXT         If provided, will be passed as keyword arguments
                               to training function (inference.train). Seperate
                               multiple keyword arguments by comma, for
-                              example: 'n_iter=500 n_minibatch=200'.
+                              example: 'n_iter=500,n_minibatch=200'.
   --true-prior                If provided, will use true prior on all
                               iterations.  [default: False]
   --units LIST OF INTEGERS    List of integers such that each list element
