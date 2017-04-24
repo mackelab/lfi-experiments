@@ -141,7 +141,7 @@ class HHSimulator(SimulatorBase):
 
         # summary statistics
         if self.summary_stats == 0:  # no summary (whole time-series)
-            self.signal_ds = 10
+            self.signal_ds = 20
             self.n_summary_stats = len(self.t[::self.signal_ds])  # quick hack: downsampling
             self.labels_sum_stats = []
             if self.pilot_norm:
@@ -365,7 +365,7 @@ class HHSimulator(SimulatorBase):
         # no summary stats?
         if self.summary_stats == 0:
             stats = np.hstack((states[::self.signal_ds].reshape(-1,1),
-                              self.I[::self.signal_ds].reshape(-1,1)))
+                               self.I[::self.signal_ds].reshape(-1,1)))
             return stats[np.newaxis, :]  # 1 x time series x 2 features
 
         x = states.reshape(-1)
