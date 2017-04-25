@@ -22,6 +22,7 @@ class GLMSimulator(SimulatorBase):
                  dir_cache='results/glm/data/',
                  duration=100,
                  pilot_samples=1000,
+                 prior_uniform=False,
                  seed=None,
                  seed_obs=None,
                  seed_input=None,
@@ -42,6 +43,8 @@ class GLMSimulator(SimulatorBase):
         pilot_samples : bool
             Number of pilot samples to generate, set to 0 to disable normalize
             of summary statistics
+        prior_uniform : bool
+            Flag to switch between Gaussian and uniform prior
         seed : int or None
             If set, randomness across runs is disabled
         seed_obs : int or None
@@ -65,7 +68,7 @@ class GLMSimulator(SimulatorBase):
         prior_min
         prior_max
         """
-        super().__init__(seed=seed)
+        super().__init__(prior_uniform=prior_uniform,seed=seed)
         self.seed_obs = seed_obs
         self.seed_input = seed_input
 
@@ -151,18 +154,24 @@ class GLMSimulator(SimulatorBase):
     def prior(self):
         range_lower = 0.5*self.true_params
         range_upper = 1.5*self.true_params
-
-        # Smoothing prior on h; N(0, 1) on b0. Smoothness encouraged by
-        # penalyzing 2nd order differences of filter elements
-        D = np.diag(np.ones(self.n_params-1)) - np.diag(np.ones(self.n_params-2), -1)
-        F = np.dot(D, D)
-        # Binv is block diagonal
-        Binv = np.zeros(shape=(self.n_params,self.n_params))
-        Binv[0,0] = 1    # offset (b0)
-        Binv[1:,1:] = np.dot(F.T, F) # filter (h)
-
-        prior_mn = self.true_params*0.
-        prior_prec = Binv
+        
+        if self.prior_uniform:
+            self.prior_min = range_lower
+            self.prior_max = range_upper
+            return pdf.Uniform(lower=self.prior_min, upper=self.prior_max,
+                               seed=self.gen_newseed())
+        else:
+            # Smoothing prior on h; N(0, 1) on b0. Smoothness encouraged by
+            # penalyzing 2nd order differences of filter elements
+            D = np.diag(np.ones(self.n_params-1)) - np.diag(np.ones(self.n_params-2), -1)
+            F = np.dot(D, D)
+            # Binv is block diagonal
+            Binv = np.zeros(shape=(self.n_params,self.n_params))
+            Binv[0,0] = 1    # offset (b0)
+            Binv[1:,1:] = np.dot(F.T, F) # filter (h)
+    
+            prior_mn = self.true_params*0.
+            prior_prec = Binv
         return pdf.Gaussian(m=prior_mn, P=prior_prec, seed=self.gen_newseed())
 
     @lazyprop
