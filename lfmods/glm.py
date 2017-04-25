@@ -24,6 +24,7 @@ class GLMSimulator(SimulatorBase):
                  pilot_samples=1000,
                  seed=None,
                  seed_obs=None,
+                 seed_input=None,
                  summary_stats=1,
                  verbose=False):
         """GLM simulator
@@ -46,6 +47,9 @@ class GLMSimulator(SimulatorBase):
         seed_obs : int or None
             If set, randomness of obs is controlled independently of seed.
             Important: If only `seed` is set, `obs` is not random
+        seed_input : int or None
+            If set, randomness of input is controlled independently of seed.
+            Important: If only `seed` is set, input is not random
         summary_stats : int
             Serves as a switch to change between different ways to calculate
             summary statistics:
@@ -63,6 +67,7 @@ class GLMSimulator(SimulatorBase):
         """
         super().__init__(seed=seed)
         self.seed_obs = seed_obs
+        self.seed_input = seed_input
 
         self.cached_pilot = cached_pilot
         self.cached_sims = cached_sims
@@ -103,7 +108,13 @@ class GLMSimulator(SimulatorBase):
         self.t = np.arange(0, self.duration, self.dt)
 
         # input: gaussian white noise N(0, 1)
-        self.I = self.rng.randn(len(self.t))
+        if self.seed_input is None:
+            new_seed = self.gen_seed()
+        else:
+            new_seed = self.seed_input
+        self.rng_input = np.random.RandomState(seed=new_seed)
+            
+        self.I = self.rng_input.randn(len(self.t))      
         self.I_obs = self.I.copy()
 
         self.max_n_steps = 10000
