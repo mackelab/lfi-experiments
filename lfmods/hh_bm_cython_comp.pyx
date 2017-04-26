@@ -109,13 +109,6 @@ cdef double dtau_p(double x):
 	cdef double den = 3.3*exp(0.05*v1) + exp(-0.05*v1)
 	return -tau_max * (0.05 * 3.3 * exp(0.05 * v1) - 0.05 * exp(-0.05*v1)) / (den ** 2)
 
-@cython.cdivision(True)
-cdef double normal():
-	cdef double u1 = rand() * 1.0 / RAND_MAX
-	cdef double u2 = rand() * 1.0 / RAND_MAX
-
-	return sqrt(-2 * log(u1)) * cos(2 * 3.141592658539 * u2)
-
 def seed(n):
 	np.random.seed(n)
 
@@ -150,7 +143,7 @@ cdef void updatebe(np.ndarray[double,ndim=1] I, np.ndarray[double,ndim=1] V,np.n
 	for j in range(fineness):
 		b = scipy.optimize.fixed_point(updatefunc,b,args=(b,I[i-1],dt))
 
-	V[i] = b[0] + nois_fact * (normal() * sqrt(dt))
+	V[i] = b[0] + nois_fact * (np.random.normal() * sqrt(dt))
 	n[i] = b[1]
 	m[i] = b[2]
 	h[i] = b[3]
@@ -204,6 +197,8 @@ cdef void updatefe(np.ndarray[double,ndim=1] I, np.ndarray[double,ndim=1] V,np.n
 	cdef double dt = tstep / fineness
 
 	cdef int j
+	cdef np.ndarray[double,ndim=1] rl = np.random.normal(size = fineness)
+
 	for j in range(fineness):
 		I_Na = (cm**3)*gbar_Na*ch*(cV-E_Na)
 		I_K = (cn**4)*gbar_K*(cV-E_K)
@@ -212,7 +207,7 @@ cdef void updatefe(np.ndarray[double,ndim=1] I, np.ndarray[double,ndim=1] V,np.n
 		I_ion = I[i-1] - I_K - I_Na - I_L - I_M
 	
 		###############################
-		cV += (dt*I_ion + nois_fact * (normal() * sqrt(dt))) / C
+		cV += (dt*I_ion + nois_fact * (rl[j] * sqrt(dt))) / C
 		cn += dt*(alpha_n(cV)*(1-cn) - beta_n(cV) * cn)
 		cm += dt*(alpha_m(cV)*(1-cm) - beta_m(cV) * cm)
 		ch += dt*(alpha_h(cV)*(1-ch) - beta_h(cV) * ch)
@@ -308,101 +303,3 @@ def hinesmethod(np.ndarray[double,ndim=1] t,np.ndarray[double,ndim=1] I,np.ndarr
 		updatehines(I,V,m,n,h,p,i,tstep,fineness)
 
 	V[t.shape[0] - 1] = V[t.shape[0] - 2]
-
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-@cython.cdivision(True)
-cdef void updateft15(np.ndarray[double,ndim=1] I, np.ndarray[double,ndim=1] V,np.ndarray[double,ndim=1] m,np.ndarray[double,ndim=1] n,np.ndarray[double,ndim=1] h,np.ndarray[double,ndim=1] p,int i,double tstep,int fineness, np.ndarray[double,ndim=1] r):
-	# currents
-	cdef double cV = V[i-1]
-	cdef double ch = h[i-1]
-	cdef double cm = m[i-1]
-	cdef double cn = n[i-1]
-	cdef double cp = p[i-1]
-
-	cdef double dt = tstep / fineness
-	cdef double sqrtdt = sqrt(dt)
-
-	cdef double I_Na, I_K, I_L, I_M
-	cdef double aV, an, am, ah, ap, dV, dn, dm, dh, dp
-	cdef double L1aV, L0aV, L1am, L0am, L1an, L0an, L1ah, L0ah, L1ap, L0ap
-	cdef double aln, alm, alh, ben, bem, beh, taup
-	cdef double dw, dz
-	cdef double temp
-	cdef int j
-	for j in range(fineness):	
-		dw = r[i * fineness + j]	
-		dz = 0.5 * dt * (dw + sqrtdt * normal() / sqrt(3)) * nois_fact
-
-		I_Na = (cm**3)*gbar_Na*ch*(cV-E_Na)
-		I_K = (cn**4)*gbar_K*(cV-E_K)
-		I_L = g_L*(cV-E_L)
-		I_M = gbar_M*cp*(cV-E_K)
-
-		aln = alpha_n(cV)
-		alm = alpha_m(cV)
-		alh = alpha_h(cV)
-
-		ben = beta_n(cV)
-		bem = beta_m(cV)
-		beh = beta_h(cV)
-	
-		taup = tau_p(cV)
-
-		aV = (I[i-1] - I_K - I_Na - I_L - I_M) / C
-		an = aln*(1-cn) - ben*cn
-		am = alm*(1-cm) - bem*cm
-		ah = alh*(1-ch) - beh*ch
-		ap = (p_inf(cV)-cp)/taup
-
-		L1aV = - (gbar_Na * (cm**3) * ch + gbar_K * (cn**4) + g_L + gbar_M * cp)
-		L0aV = 	aV * L1aV - \
-				an * 4 * (cn ** 3) * gbar_K * (cV - E_K) - \
-				am * 3 * (cm ** 2) * gbar_Na * ch * (cV - E_Na) - \
-				ah * (cm ** 3) * gbar_Na * (cV - E_Na) - \
-				ap * gbar_M * (cV - E_K)
-
-		L1an = dalpha_n(cV) * (1 - cn) - dbeta_n(cV) * cn
-		L1am = dalpha_m(cV) * (1 - cm) - dbeta_m(cV) * cm
-		L1ah = dalpha_h(cV) * (1 - ch) - dbeta_h(cV) * ch
-		L1ap = (dp_inf(cV) - cp * dtau_p(cV) / taup) / taup
-
-		L0an = aV * L1an - an * (aln + ben)
-		L0am = aV * L1am - am * (alm + bem)
-		L0ah = aV * L1ah - ah * (alh + beh)
-		L0ap = aV * L1ah - ap / taup
-
-		###############################
-		# + nois_fact*np.random.normal(1)/(tstep**0.5)
-		temp = (dt) ** 2
-		dV = aV * dt + nois_fact * dw + L1aV * dz + 0.5 * L0aV * temp
-		dn = an * dt + 					L1an * dz + 0.5 * L0an * temp
-		dm = am * dt + 					L1am * dz + 0.5 * L0am * temp
-		dh = ah * dt + 					L1ah * dz + 0.5 * L0ah * temp
-		dp = ap * dt + 					L1ap * dz + 0.5 * L0ap * temp
-
-		cV += dV
-		cn += dn
-		cm += dm
-		ch += dh
-		cp += dp
-
-	V[i] = cV
-	n[i] = cn
-	m[i] = cm
-	h[i] = ch
-	p[i] = cp
-
-# Order 1.5 Taylor
-def computeft15(np.ndarray[double,ndim=1] t,np.ndarray[double,ndim=1] I,np.ndarray[double,ndim=1] V,np.ndarray[double,ndim=1] m,np.ndarray[double,ndim=1] n,np.ndarray[double,ndim=1] h,np.ndarray[double,ndim=1] p,double tstep,int fineness,np.ndarray[double,ndim=1] r):
-#	srand(seed)
-	V[0] = E_L
-	n[0] = alpha_n(V[0])/(alpha_n(V[0])+beta_n(V[0]))
-	m[0] = alpha_m(V[0])/(alpha_m(V[0])+beta_m(V[0]))
-	h[0] = alpha_h(V[0])/(alpha_h(V[0])+beta_h(V[0]))
-	p[0] = p_inf(V[0])
-
-	for i in range(1, t.shape[0]):
-		updateft15(I,V,m,n,h,p,i,tstep,fineness,r)
-
