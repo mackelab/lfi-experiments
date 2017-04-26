@@ -172,7 +172,7 @@ class GLMSimulator(SimulatorBase):
     
             prior_mn = self.true_params*0.
             prior_prec = Binv
-        return pdf.Gaussian(m=prior_mn, P=prior_prec, seed=self.gen_newseed())
+            return pdf.Gaussian(m=prior_mn, P=prior_prec, seed=self.gen_newseed())
 
     @lazyprop
     def pilot_means(self):
