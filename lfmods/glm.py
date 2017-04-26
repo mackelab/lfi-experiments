@@ -20,6 +20,7 @@ class GLMSimulator(SimulatorBase):
                  cached_pilot=False,
                  cached_sims=False,
                  dir_cache='results/glm/data/',
+                 len_filter = 9,
                  duration=100,
                  pilot_samples=1000,
                  prior_uniform=False,
@@ -38,6 +39,8 @@ class GLMSimulator(SimulatorBase):
             If True, and iff seed is specified, will cache simulations (only works if seed is set)
         dir_cache : str
             Sets dir for cache
+        len_filter : int
+            Length of filter
         duration : int
             Duration of traces in ms
         pilot_samples : bool
@@ -75,6 +78,7 @@ class GLMSimulator(SimulatorBase):
         self.cached_pilot = cached_pilot
         self.cached_sims = cached_sims
         self.dir_cache = dir_cache
+        self.len_filter = len_filter
         self.duration = duration
         self.pilot_samples = pilot_samples
         self.summary_stats = summary_stats
@@ -93,16 +97,15 @@ class GLMSimulator(SimulatorBase):
 
         # true parameters: (b0, h) = offset, temporal filter
         b0=-2.
-        M = 9   # Length of the filter
         a = 0.5  # inverse time constant of the filter
-        tau = np.linspace(1, M, M) # Support for the filter
+        tau = np.linspace(1, self.len_filter, self.len_filter) # Support for the filter
         h = (a * tau)**3 * np.exp(-a * tau) # Temporal filter
         true_params = np.concatenate((np.array([b0]),h))
 
         self.true_params = np.concatenate((np.array([b0]),h))
 
         self.labels_params = ['b0']
-        for i in range(M):
+        for i in range(self.len_filter):
             self.labels_params.append('h'+str(i+1))
         self.n_params = len(self.true_params)
 
