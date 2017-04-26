@@ -17,8 +17,8 @@ from tqdm import tqdm
 
 class GLMSimulator(SimulatorBase):
     def __init__(self,
-                 cached_pilot=True,
-                 cached_sims=True,
+                 cached_pilot=False,
+                 cached_sims=False,
                  dir_cache='results/glm/data/',
                  duration=100,
                  pilot_samples=1000,
@@ -116,8 +116,8 @@ class GLMSimulator(SimulatorBase):
         else:
             new_seed = self.seed_input
         self.rng_input = np.random.RandomState(seed=new_seed)
-            
-        self.I = self.rng_input.randn(len(self.t))      
+
+        self.I = self.rng_input.randn(len(self.t))
         self.I_obs = self.I.copy()
 
         self.max_n_steps = 10000
@@ -154,7 +154,7 @@ class GLMSimulator(SimulatorBase):
     def prior(self):
         range_lower = 0.5*self.true_params
         range_upper = 1.5*self.true_params
-        
+
         if self.prior_uniform:
             self.prior_min = range_lower
             self.prior_max = range_upper
@@ -169,7 +169,7 @@ class GLMSimulator(SimulatorBase):
             Binv = np.zeros(shape=(self.n_params,self.n_params))
             Binv[0,0] = 1    # offset (b0)
             Binv[1:,1:] = np.dot(F.T, F) # filter (h)
-    
+
             prior_mn = self.true_params*0.
             prior_prec = Binv
             return pdf.Gaussian(m=prior_mn, P=prior_prec, seed=self.gen_newseed())
@@ -202,7 +202,7 @@ class GLMSimulator(SimulatorBase):
         Hashing will be based on args passed to function, plus a set
         of attributes describing global simulator settings.
         """
-        key = [self.seed, self.duration, self.t[-1], \
+        key = [self.seed, self.seed_obs, self.seed_input, self.duration, self.t[-1], \
                np.sum(self.I), self.max_n_steps, self.summary_stats]
 
         for arg in args:
