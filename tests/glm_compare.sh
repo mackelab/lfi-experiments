@@ -15,6 +15,6 @@ cd ..
 # python run.py glm 2sta_500_iwloss_seed2 --rep 15 --seed 2 ${COMMON1}
 # python run.py glm 2sta_500_iwloss_seed3 --rep 15 --seed 3 ${COMMON1}
 
-python run.py glm 2sta_500_iwloss_rnn_seed1 --rnn --rep 15 --seed 1 ${COMMON1}
-python run.py glm 2sta_500_iwloss_rnn_seed2 --rnn --rep 15 --seed 2 ${COMMON1}
-python run.py glm 2sta_500_iwloss_rnn_seed3 --rnn --rep 15 --seed 3 ${COMMON1}
+python run.py glm 2sta_500_iwloss_rnn_seed1 --rnn 2 --rep 15 --seed 1 ${COMMON1}
+python run.py glm 2sta_500_iwloss_rnn_seed2 --rnn 2 --rep 15 --seed 2 ${COMMON1}
+python run.py glm 2sta_500_iwloss_rnn_seed3 --rnn 2 --rep 15 --seed 3 ${COMMON1}
