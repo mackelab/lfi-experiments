@@ -2,7 +2,6 @@ import numpy as np
 cimport numpy as np
 import scipy
 from libc.math cimport exp, log, cos, sqrt
-from libc.stdlib cimport rand, srand, RAND_MAX
 cimport cython
 
 ###############################################################################
@@ -118,7 +117,7 @@ cdef double normal():
 	return sqrt(-2 * log(u1)) * cos(2 * 3.141592658539 * u2)
 
 def seed(n):
-	srand(n)
+	np.random.seed(n)
 
 def setnoisefactor(double x):
 	global nois_fact
@@ -258,20 +257,19 @@ cdef void updatehines(np.ndarray[double,ndim=1] I, np.ndarray[double,ndim=1] V,n
 	cdef double Cn, Dn, Cm, Dm, Ch, Dh, Cp, Dp
 
 	cdef double dw1, dw2
-	cdef double r1, r2
 	cdef double dz1, dz2
 	cdef double q
 
+	cdef np.ndarray[double,ndim=1] rl = np.random.normal(size = 2 * fineness)
+	cdef np.ndarray[double,ndim=1] wl = np.random.normal(size = 2 * fineness)
 	for j in range(fineness):
 		A = -(cm ** 3)*gbar_Na*ch - (cn ** 4) * gbar_K - g_L - gbar_M * cp
 		B = I[i-1] + (cm ** 3) * gbar_Na * ch * E_Na + (cn**4) * gbar_K * E_K + g_L * E_L + gbar_M * cp * E_K
 	
-		dw1 = normal() * sqrt(0.5 * dt)
-		dw2 = normal() * sqrt(0.5 * dt)
-		r1 = normal() * sqrt(dt / 3.0)
-		r2 = normal() * sqrt(dt / 3.0)
-		dz1 = 0.5 * (dt / 2.0) * (dw1 + r1)
-		dz2 = 0.5 * (dt / 2.0) * (dw2 + r2)
+		dw1 = wl[2 * j] * sqrt(0.5 * dt)
+		dw2 = wl[2 * j + 1] * sqrt(0.5 * dt)
+		dz1 = 0.5 * (dt / 2.0) * (dw1 + rl[2 * j] * sqrt(dt / 3.0))
+		dz2 = 0.5 * (dt / 2.0) * (dw2 + rl[2 * j + 1] * sqrt(dt / 3.0))
 
 		q = dz1 + dz2 - 0.5 * dt * dw1
 
