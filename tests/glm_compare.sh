@@ -1,8 +1,8 @@
 #/bin/sh
 
 # COMMON='--samples 2500 --rep 10 --svi --sim-kwargs seed_obs=1,seed_input=42'
-COMMON1='--samples 500 --rep 15 --iw-loss --prior-alpha 0.05 --svi --sim-kwargs len_filter=1,seed_obs=1,seed_input=42'
-# COMMON2='--samples 500 --rep 15 --rnn 2 --iw-loss --prior-alpha 0.05 --svi --sim-kwargs len_filter=1,seed_obs=1,seed_input=42 --train-kwargs observe='lasagne_out''
+COMMON1='--samples 500 --rep 5 --iw-loss --sim-kwargs len_filter=1,seed_obs=1,seed_input=42 --train-kwargs observe="weights"'
+# COMMON2='--samples 500 --rep 15 --rnn 2 --iw-loss --prior-alpha 0.05 --svi --sim-kwargs len_filter=1,seed_obs=1,seed_input=42 --train-kwargs observe="lasagne_out"'
 
 cd ..
 
