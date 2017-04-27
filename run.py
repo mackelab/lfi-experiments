@@ -177,7 +177,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
                                                 rnn_hiddens=rnn)
                     created = True
                 else:
-                    path_posterior = '{}{}_iter_{}_posterior.pkl'.format(dirs['dir_nets'],
+                    path_posterior = '{}{}_iter_{:04d}_posterior.pkl'.format(dirs['dir_nets'],
                         prefix, iteration-1)
                     approx_posterior = io.load(path_posterior)
 
@@ -189,7 +189,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
                         approx_posterior = None
 
                     net, props = lfi.net_reload(n_components=n_components,
-                                                postfix='iter_{}'.format(iteration-1),
+                                                postfix='iter_{:04d}'.format(iteration-1),
                                                 prior_alpha=prior_alpha,
                                                 prior_proposal=approx_posterior)
 
@@ -202,7 +202,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
                 lfi.train(debug=debug,
                           n_samples=n_samples,
                           net=net,
-                          postfix='iter_{}'.format(iteration),
+                          postfix='iter_{:04d}'.format(iteration),
                           **train_kwargs)
 
         if nb:
