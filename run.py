@@ -201,6 +201,7 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
 
                 lfi.train(debug=debug,
                           n_samples=n_samples,
+                          n_samples_val=val,
                           net=net,
                           postfix='iter_{:04d}'.format(iteration),
                           **train_kwargs)
