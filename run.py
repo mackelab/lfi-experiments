@@ -121,6 +121,12 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
     sim_kwargs = string_to_kwargs(sim_kwargs)
     train_kwargs = string_to_kwargs(train_kwargs)
 
+    # SVI: posterior over previous weights as prior
+    if 'reg_init' in train_kwargs.keys() and train_kwargs['reg_init']:
+        reg_init = True
+    else:
+        reg_init = False
+
     try:
         if model == 'gauss':
             from lfmods.gauss import GaussSimulator as Simulator
@@ -198,6 +204,11 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
                     n_samples = samples[iteration-1]
                 except IndexError:
                     n_samples = samples[-1]
+
+                if i == 0 and reg_init:
+                    train_kwargs['reg_init'] = False  # do not use init as prior
+                elif reg_init:
+                    train_kwargs['reg_init'] = True
 
                 lfi.train(debug=debug,
                           n_samples=n_samples,
