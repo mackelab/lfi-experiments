@@ -14,6 +14,7 @@ class MoGSimulator(SimulatorBase):
     def __init__(self,
                  bimodal=False,
                  dim=1,
+                 prior_abslim=10.0,
                  seed=None):
         """Mixture of Gaussians simulator
 
@@ -23,6 +24,8 @@ class MoGSimulator(SimulatorBase):
             If True, will add a second mode
         dim : int
             Dimensionality of the data as well as of theta
+        prior_abslim : float
+            Uniform prior: absolute limits
         seed : int or None
             If set, randomness across runs is disabled
 
@@ -49,8 +52,8 @@ class MoGSimulator(SimulatorBase):
             raise ValueError('not implemented')
 
         # prior parameters
-        self.prior_min = np.array([-10.0 for d in range(dim)])  # dim,
-        self.prior_max = np.array([ 10.0 for d in range(dim)])  # dim,
+        self.prior_min = np.array([-prior_abslim for d in range(dim)])  # dim,
+        self.prior_max = np.array([+prior_abslim for d in range(dim)])  # dim,
 
     @lazyprop
     def obs(self):
