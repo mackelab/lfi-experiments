@@ -40,8 +40,11 @@ class GaussSimulator(SimulatorBase):
             Gaussian prior: covariance
         prior_mean : float
             Gaussian prior: mean
-        seed : int or None (default: None)
+        seed : int or None
             If set, randomness across runs is disabled
+        seed_obs : int or None
+            If set, randomness of obs is controlled independently of seed.
+            Important: If only `seed` is set, `obs` is not random
         true_mean : float
             Location of mean
 
@@ -51,7 +54,7 @@ class GaussSimulator(SimulatorBase):
         prior_log : bool
             whether or not prior is in log space
         """
-        super().__init__(prior_uniform=False, seed=seed)
+        super().__init__(prior_uniform=False, seed=seed)  # prior_uniform is overwritten below
         self.seed_obs = seed_obs
 
         self.dim = dim
