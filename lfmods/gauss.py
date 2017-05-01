@@ -14,7 +14,11 @@ class GaussSimulator(SimulatorBase):
     def __init__(self,
                  dim=1,
                  n_summary=1,
+                 noise_cov=0.1,
                  prior_uniform=False,
+                 prior_abslim=10.0,
+                 prior_cov=1.0,
+                 prior_mean=0.0,
                  seed=None,
                  seed_obs=None,
                  true_mean=0.0):
@@ -26,8 +30,16 @@ class GaussSimulator(SimulatorBase):
             Number of dimensions
         n_summary : int
             Number of samples per draw entering summary statistics
+        noise_cov : float
+            Covariance of noise on observations
         prior_uniform : bool
             Switch between Gaussian and uniform prior
+        prior_abslim : float
+            Uniform prior: absolute limits
+        prior_cov : float
+            Gaussian prior: covariance
+        prior_mean : float
+            Gaussian prior: mean
         seed : int or None (default: None)
             If set, randomness across runs is disabled
         true_mean : float
@@ -38,20 +50,25 @@ class GaussSimulator(SimulatorBase):
         obs : observation
         prior_log : bool
             whether or not prior is in log space
-        prior_min
-        prior_max
         """
         super().__init__(prior_uniform=False, seed=seed)
         self.seed_obs = seed_obs
 
-        # attributes
         self.dim = dim
         self.n_summary = n_summary
         self.prior_uniform = prior_uniform
 
+        # for gaussian prior
+        self.prior_cov = prior_cov * np.eye(dim)
+        self.prior_mean = prior_mean * np.ones((dim,))  # dim,
+
+        # for uniform prior
+        self.prior_min = np.array([-prior_abslim for d in range(dim)])  # dim,
+        self.prior_max = np.array([+prior_abslim for d in range(dim)])  # dim,
+
         # model parameters
         self.true_params = true_mean*np.ones((dim,))
-        self.noise_cov = 0.1*np.eye(dim)
+        self.noise_cov = noise_cov*np.eye(dim)
 
     @lazyprop
     def obs(self):
@@ -71,15 +88,9 @@ class GaussSimulator(SimulatorBase):
     @lazyprop
     def prior(self):
         if not self.prior_uniform:
-            # gaussian prior parameters
-            self.prior_cov = 1.*np.eye(self.dim)
-            self.prior_mu = 0.*np.ones((self.dim,))
-            return pdf.Gaussian(m=self.prior_mu, S=self.prior_cov,
+            return pdf.Gaussian(m=self.prior_mean, S=self.prior_cov,
                                 seed=self.gen_newseed())
         else:
-            # uniform prior parameters
-            self.prior_min = np.array([-10.0 for d in range(self.dim)])  # dim,
-            self.prior_max = np.array([ 10.0 for d in range(self.dim)])  # dim,
             return pdf.Uniform(lower=self.prior_min, upper=self.prior_max,
                                seed=self.gen_newseed())
 
@@ -89,7 +100,7 @@ class GaussSimulator(SimulatorBase):
         """
         if not self.prior_uniform:
             posterior_cov = np.linalg.inv(np.linalg.inv(self.prior_cov)+self.n_summary*np.linalg.inv(self.noise_cov))
-            posterior_mu = np.dot(posterior_cov, (self.n_summary*np.dot(np.linalg.inv(self.noise_cov), self.obs.reshape(-1))+np.dot(np.linalg.inv(self.prior_cov), self.prior_mu)))
+            posterior_mu = np.dot(posterior_cov, (self.n_summary*np.dot(np.linalg.inv(self.noise_cov), self.obs.reshape(-1))+np.dot(np.linalg.inv(self.prior_cov), self.prior_mean)))
             return pdf.Gaussian(m=posterior_mu, S=posterior_cov)
         else:
             posterior_mu = self.obs.reshape(-1)
