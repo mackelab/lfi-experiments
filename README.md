@@ -38,6 +38,9 @@ Options:
   --debug                     If provided, will enter debugger on error.
                               [default: False]
   --device TEXT               Device to compute on.  [default: cpu]
+  --increase-data             If set, will increase the training data on each
+                              round by reloading data generated in previous
+                              round.  [default: False]
   --iw-loss                   If provided, will use importance weighted loss.
                               [default: False]
   --loss-calib FLOAT          If provided, will do loss calibration with
@@ -50,23 +53,22 @@ Options:
   --pdb-iter INTEGER          Number of iterations after which to debug.
   --prior-alpha FLOAT         If iw_loss is True, will use this alpha as
                               weight for true prior in proposal distribution.
-                              [default: 0.25]
+                              [default: 0.2]
   --rep LIST OF INTEGERS      Specify the number of repetitions per
                               n_components model, seperation by comma. For
-                              instance, '2,1' would mean that 2 itertions with
-                              1 component are run, and 1 iteration with 2
-                              components are run.  [default: 2, 1]
+                              instance, '2,1' would mean that 2 rounds with 1
+                              component are run, and 1 round with 2 components
+                              are run.  [default: 2, 1]
   --rnn INTEGER               If specified, will use many-to-one RNN with
                               specified number of hidden units instead of
                               summary statistics.
   --samples LIST OF INTEGERS  Number of samples, provided as either a single
                               number or as a comma seperated list. If a list
                               is provided, say '1000,2000', 1000 samples are
-                              drawn for the first iteration, and 2000 samples
-                              for the second iteration. If more iterations
-                              than elements in the list are run, 2000 samples
-                              will be drawn for those (last list element).
-                              [default: 2000]
+                              drawn for the first round, and 2000 samples for
+                              the second round. If more rounds than elements
+                              in the list are run, 2000 samples will be drawn
+                              for those (last list element).  [default: 2000]
   --seed INTEGER              If provided, network and simulation are seeded
   --sim-kwargs TEXT           If provided, will be passed as keyword arguments
                               to simulator. Seperate multiple keyword
@@ -78,8 +80,8 @@ Options:
                               to training function (inference.train). Seperate
                               multiple keyword arguments by comma, for
                               example: 'n_iter=500,n_minibatch=200'.
-  --true-prior                If provided, will use true prior on all
-                              iterations.  [default: False]
+  --true-prior                If provided, will use true prior on all rounds.
+                              [default: False]
   --units LIST OF INTEGERS    List of integers such that each list element
                               specifies the number of units per fully
                               connected hidden layer. The length of the list

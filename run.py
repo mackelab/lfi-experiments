@@ -40,6 +40,9 @@ This requires a running worker process, which can be started with worker.py')
               help='If provided, will enter debugger on error.')
 @click.option('--device', default='cpu', type=str, show_default=True,
               help='Device to compute on.')
+@click.option('--increase-data', default=False, is_flag=True, show_default=True,
+              help='If set, will increase the training data on each round by \
+reloading data generated in previous round.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
 @click.option('--loss-calib', type=float, default=None, show_default=True,
@@ -56,16 +59,16 @@ centered on x0. The variance of the kernel is determined by the float provided.'
 prior in proposal distribution.')
 @click.option('--rep', type=ListIntParamType(), default=[2,1], show_default=True,
               help='Specify the number of repetitions per n_components model, \
-seperation by comma. For instance, \'2,1\' would mean that 2 itertions with \
-1 component are run, and 1 iteration with 2 components are run.')
+seperation by comma. For instance, \'2,1\' would mean that 2 rounds with \
+1 component are run, and 1 round with 2 components are run.')
 @click.option('--rnn', type=int, default=None, show_default=True,
               help='If specified, will use many-to-one RNN with specified \
 number of hidden units instead of summary statistics.')
 @click.option('--samples', default='2000', type=ListIntParamType(), show_default=True,
               help='Number of samples, provided as either a single number or \
 as a comma seperated list. If a list is provided, say \'1000,2000\', \
-1000 samples are drawn for the first iteration, and 2000 samples for the second \
-iteration. If more iterations than elements in the list are run, 2000 samples \
+1000 samples are drawn for the first round, and 2000 samples for the second \
+round. If more rounds than elements in the list are run, 2000 samples \
 will be drawn for those (last list element).')
 @click.option('--seed', type=int, default=None, show_default=True,
               help='If provided, network and simulation are seeded')
@@ -80,14 +83,14 @@ to simulator. Seperate multiple keyword arguments by comma, for example:\
 to training function (inference.train). Seperate multiple keyword arguments \
 by comma, for example: \'n_iter=500,n_minibatch=200\'.')
 @click.option('--true-prior', default=False, is_flag=True, show_default=True,
-              help='If provided, will use true prior on all iterations.')
+              help='If provided, will use true prior on all rounds.')
 @click.option('--units', type=ListIntParamType(), default=[50], show_default=True,
               help='List of integers such that each list element specifies \
 the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_browser,
+def run(model, prefix, enqueue, debug, device, increase_data, iw_loss, loss_calib, nb, no_browser,
         pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
         true_prior, units, val):
     """Run model
@@ -210,6 +213,9 @@ def run(model, prefix, enqueue, debug, device, iw_loss, loss_calib, nb, no_brows
                 elif reg_init:
                     train_kwargs['reg_init'] = True
 
+                if increase_data and iteration != 1:
+                    train_kwargs['load_trn'] = 'iter_{:04d}'.format(iteration-1)
+                
                 lfi.train(debug=debug,
                           n_samples=n_samples,
                           n_samples_val=val,
