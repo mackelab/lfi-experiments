@@ -32,6 +32,9 @@ Usage: run.py [OPTIONS] MODEL PREFIX
   See run.py --help for info on parameters.
 
 Options:
+  --early-stopping            If set, will do early stopping. Only works in
+                              combination with validation set, i.e., make sure
+                              that `--val` is greater zero.  [default: False]
   --enqueue TEXT              Enqueue the job to a given queue instead of
                               running it now. This requires a running worker
                               process, which can be started with worker.py

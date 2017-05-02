@@ -33,6 +33,9 @@ class ListIntParamType(click.ParamType):
 @click.command()
 @click.argument('model', type=click.Choice(['gauss', 'glm', 'hh', 'mog']))
 @click.argument('prefix', type=str)
+@click.option('--early-stopping', default=False, is_flag=True, show_default=True,
+              help='If set, will do early stopping. Only works in combination with \
+validation set, i.e., make sure that `--val` is greater zero.')
 @click.option('--enqueue', default=None, type=str, show_default=True,
               help='Enqueue the job to a given queue instead of running it now. \
 This requires a running worker process, which can be started with worker.py')
@@ -90,9 +93,9 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, enqueue, debug, device, increase_data, iw_loss, loss_calib, nb, no_browser,
-        pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
-        true_prior, units, val):
+def run(model, prefix, early_stopping, enqueue, debug, device, increase_data, iw_loss,
+        loss_calib, nb, no_browser, pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs,
+        seed, svi, train_kwargs, true_prior, units, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -215,6 +218,14 @@ def run(model, prefix, enqueue, debug, device, increase_data, iw_loss, loss_cali
 
                 if increase_data and iteration != 1:
                     train_kwargs['load_trn'] = 'iter_{:04d}'.format(iteration-1)
+
+                if early_stopping and val > 0 and iteration != 1:
+                    path_prev_loss = '{}{}_iter_{:04d}_loss.pkl'.format(dirs['dir_nets'],
+                        prefix, iteration-1)
+                    prev_loss = io.load(path_prev_loss)
+                    pdict = prev_loss['val_min_params']
+                    print('Early stopping : Setting parameters to iteration {} of previous round.'.format(prev_loss['val_min_iter']))
+                    net.set_params(pdict)
 
                 lfi.train(debug=debug,
                           n_samples=n_samples,
