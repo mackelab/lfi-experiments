@@ -215,11 +215,12 @@ def run(model, prefix, enqueue, debug, device, increase_data, iw_loss, loss_cali
 
                 if increase_data and iteration != 1:
                     train_kwargs['load_trn'] = 'iter_{:04d}'.format(iteration-1)
-                
+
                 lfi.train(debug=debug,
                           n_samples=n_samples,
                           n_samples_val=val,
                           net=net,
+                          pdb_iter=pdb_iter,
                           postfix='iter_{:04d}'.format(iteration),
                           **train_kwargs)
 
