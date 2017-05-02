@@ -38,8 +38,8 @@ Options:
   --enqueue TEXT              Enqueue the job to a given queue instead of
                               running it now. This requires a running worker
                               process, which can be started with worker.py
-  --debug                     If provided, will enter debugger on error.
-                              [default: False]
+  --debug                     If provided, will enter debugger on error and
+                              show more info during runtime.  [default: False]
   --device TEXT               Device to compute on.  [default: cpu]
   --increase-data             If set, will increase the training data on each
                               round by reloading data generated in previous
@@ -51,6 +51,8 @@ Options:
                               the kernel is determined by the float provided.
   --nb                        If provided, will call nb.py after fitting.
                               [default: False]
+  --numerical-fix             Numerical fix (for the orginal epsilonfree
+                              method).  [default: False]
   --no-browser                If provided, will not open plots of nb.py in
                               browser.  [default: False]
   --pdb-iter INTEGER          Number of iterations after which to debug.

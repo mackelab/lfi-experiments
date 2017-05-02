@@ -40,7 +40,8 @@ validation set, i.e., make sure that `--val` is greater zero.')
               help='Enqueue the job to a given queue instead of running it now. \
 This requires a running worker process, which can be started with worker.py')
 @click.option('--debug', default=False, is_flag=True, show_default=True,
-              help='If provided, will enter debugger on error.')
+              help='If provided, will enter debugger on error and show more \
+info during runtime.')
 @click.option('--device', default='cpu', type=str, show_default=True,
               help='Device to compute on.')
 @click.option('--increase-data', default=False, is_flag=True, show_default=True,
@@ -53,6 +54,8 @@ reloading data generated in previous round.')
 centered on x0. The variance of the kernel is determined by the float provided.')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
+@click.option('--numerical-fix', default=False, is_flag=True, show_default=True,
+              help='Numerical fix (for the orginal epsilonfree method).')
 @click.option('--no-browser', default=False, is_flag=True, show_default=True,
               help='If provided, will not open plots of nb.py in browser.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
@@ -93,9 +96,10 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, early_stopping, enqueue, debug, device, increase_data, iw_loss,
-        loss_calib, nb, no_browser, pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs,
-        seed, svi, train_kwargs, true_prior, units, val):
+def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
+        iw_loss, loss_calib, nb, numerical_fix, no_browser, pdb_iter,
+        prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
+        true_prior, units, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -185,6 +189,7 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data, iw
                                                 loss_calib=loss_calib_pdf,
                                                 n_components=n_components,
                                                 n_hiddens=units,
+                                                numerical_fix=numerical_fix,
                                                 svi=svi,
                                                 rnn_hiddens=rnn)
                     created = True
@@ -204,7 +209,6 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data, iw
                                                 postfix='iter_{:04d}'.format(iteration-1),
                                                 prior_alpha=prior_alpha,
                                                 prior_proposal=approx_posterior)
-
 
                 try:
                     n_samples = samples[iteration-1]
@@ -226,6 +230,14 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data, iw
                     pdict = prev_loss['val_min_params']
                     print('Early stopping : Setting parameters to iteration {} of previous round.'.format(prev_loss['val_min_iter']))
                     net.set_params(pdict)
+
+                if debug:
+                    print('Net')
+                    for k, v in props.items():
+                        print('{} : {}'.format(k, v))
+                    print('Train kwargs')
+                    for k, v in train_kwargs.items():
+                        print('{} : {}'.format(k, v))
 
                 lfi.train(debug=debug,
                           n_samples=n_samples,
