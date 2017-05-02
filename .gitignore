@@ -1,9 +1,6 @@
 # Project specific
 experiments/
-results/data/*
-results/figs/*
-results/nets/*
-results/plots/*
+results/
 
 # Notebook checkpoints
 .ipynb_checkpoints
