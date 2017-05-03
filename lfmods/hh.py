@@ -25,6 +25,8 @@ class HHSimulator(SimulatorBase):
                  pilot_samples=1000,
                  prior_uniform=True,
                  seed=None,
+                 seed_obs=None,
+                 seed_input=None,
                  step_current=True,
                  summary_stats=1,
                  verbose=False):
@@ -52,6 +54,12 @@ class HHSimulator(SimulatorBase):
             Flag to switch between Gaussian and uniform prior
         seed : int or None
             If set, randomness across runs is disabled
+        seed_obs : int or None
+            If set, randomness of obs is controlled independently of seed.
+            Important: If only `seed` is set, `obs` is not random
+        seed_input : int or None
+            If set, randomness of input is controlled independently of seed.
+            Important: If only `seed` is set, input is not random
         step_current : bool
             Serves as a switch to change between step current and colored noise
         summary_stats : int
@@ -75,6 +83,8 @@ class HHSimulator(SimulatorBase):
         super().__init__(prior_log=True,
                          prior_uniform=prior_uniform,
                          seed=seed)
+        self.seed_obs = seed_obs
+        self.seed_input = seed_input
 
         self.cached_pilot = cached_pilot
         self.cached_sims = cached_sims
@@ -126,13 +136,19 @@ class HHSimulator(SimulatorBase):
         if self.step_current:
             self.I = step_current
         else:
+            if self.seed_input is None:
+                new_seed = self.gen_newseed()
+            else:
+                new_seed = self.seed_input
+            self.rng_input = np.random.RandomState(seed=new_seed)
+
             times = np.linspace(0.0, self.duration, int(self.duration / self.dt) + 1)
             I_new = step_current*1.
             tau_n = 3.
             nois_mn = 0.2*step_current
             nois_fact = 2*step_current*np.sqrt(tau_n)
             for i in range(1, times.shape[0]):
-                I_new[i] = I_new[i-1] + self.dt*(-I_new[i-1] + nois_mn[i-1] + nois_fact[i-1]*self.rng.normal(0)/(self.dt**0.5))/tau_n
+                I_new[i] = I_new[i-1] + self.dt*(-I_new[i-1] + nois_mn[i-1] + nois_fact[i-1]*self.rng_input.normal(0)/(self.dt**0.5))/tau_n
             self.I = I_new
         self.I_obs = self.I.copy()
 
@@ -164,9 +180,15 @@ class HHSimulator(SimulatorBase):
     @lazyprop
     def obs(self):
         if self.obs_sim:
+            # seed for observed data
+            if self.seed_obs is None:
+                seed = self.gen_newseed()
+            else:
+                seed = self.seed_obs
+
             # generate observed data from simulation
             hh = self.bm.HH(self.init, self.true_params.reshape(1, -1),
-                            seed=self.gen_newseed())
+                            seed=seed)
             states = hh.sim_time(self.dt, self.t, self.I).reshape(1, -1, 1)
             stats = self.calc_summary_stats(states)
         else:
@@ -255,7 +277,7 @@ class HHSimulator(SimulatorBase):
         Hashing will be based on args passed to function, plus a set
         of attributes describing global simulator settings.
         """
-        key = [self.seed, self.init[0], self.dt, self.duration, self.t[-1], \
+        key = [self.seed, self.seed_obs, self.seed_input, self.init[0], self.dt, self.duration, self.t[-1], \
                np.sum(self.I), self.max_n_steps, self.summary_stats]
 
         for arg in args:
