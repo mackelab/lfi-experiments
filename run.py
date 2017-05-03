@@ -31,7 +31,7 @@ class ListIntParamType(click.ParamType):
             self.fail('%s is not a valid input' % value, param, ctx)
 
 @click.command()
-@click.argument('model', type=click.Choice(['gauss', 'glm', 'hh', 'mog']))
+@click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog']))
 @click.argument('prefix', type=str)
 @click.option('--early-stopping', default=False, is_flag=True, show_default=True,
               help='If set, will do early stopping. Only works in combination with \
@@ -138,7 +138,12 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
         reg_init = False
 
     try:
-        if model == 'gauss':
+        if model == 'autapse':
+            from lfmods.autapse import AutapseSimulator as Simulator
+            if rnn is not None:
+                sim_kwargs['pilot_samples'] = 0
+                sim_kwargs['summary_stats'] = 0
+        elif model == 'gauss':
             from lfmods.gauss import GaussSimulator as Simulator
         elif model == 'glm':
             from lfmods.glm import GLMSimulator as Simulator
