@@ -71,7 +71,7 @@ class GLMSimulator(SimulatorBase):
         prior_min
         prior_max
         """
-        super().__init__(prior_uniform=prior_uniform,seed=seed)
+        super().__init__(prior_uniform=prior_uniform, seed=seed)
         self.seed_obs = seed_obs
         self.seed_input = seed_input
 
@@ -115,7 +115,7 @@ class GLMSimulator(SimulatorBase):
 
         # input: gaussian white noise N(0, 1)
         if self.seed_input is None:
-            new_seed = self.gen_seed()
+            new_seed = self.gen_newseed()
         else:
             new_seed = self.seed_input
         self.rng_input = np.random.RandomState(seed=new_seed)
