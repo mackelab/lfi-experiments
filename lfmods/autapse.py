@@ -17,8 +17,8 @@ from tqdm import tqdm
 
 class AutapseSimulator(SimulatorBase):
     def __init__(self,
-                 cached_pilot=True,
-                 cached_sims=True,
+                 cached_pilot=False,
+                 cached_sims=False,
                  dir_cache='results/autapse/data/',
                  duration=120,
                  pilot_samples=1000,
