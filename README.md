@@ -55,6 +55,13 @@ Options:
                                list to use different bandwidths on subsequent
                                rounds, e.g. large on the first round and then
                                shrinking.
+  --loss-calib-atleast FLOAT   If set, kernel evaluation (per minibatch) will
+                               never return zero for all x at which it is
+                               evaluated: Iff the fraction of weights returned
+                               by the kernel are below the limit specified,
+                               the kernel will  will default to a uniform
+                               kernel for which the desired fraction is non-
+                               zero.  [default: 0.2]
   --loss-calib-kernel TEXT     Kernel type used for loss calibration. Note
                                that the loss calibration kernel is only used,
                                if the bandwidth specified as loss-calib is not

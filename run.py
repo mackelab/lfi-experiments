@@ -74,6 +74,11 @@ specified as loss-calib-kernel centered on x_o. The bandwidth of the kernel \
 is determined by the floats provided. Provide a list to use different \
 bandwidths on subsequent rounds, e.g. large on the first round and then \
 shrinking.')
+@click.option('--loss-calib-atleast', type=float, default=0.2, show_default=True,
+              help='If set, kernel evaluation (per minibatch) will never return \
+zero for all x at which it is evaluated: Iff the fraction of weights returned \
+by the kernel are below the limit specified, the kernel will  will default to a \
+uniform kernel for which the desired fraction is non-zero.')
 @click.option('--loss-calib-kernel', type=str, default='tricube',
               show_default=True,
               help='Kernel type used for loss calibration. Note that the loss \
@@ -124,9 +129,9 @@ equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
 def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
-        iw_loss, loss_calib, loss_calib_kernel, nb, numerical_fix, no_browser,
-        pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi,
-        train_kwargs, true_prior, units, val):
+        iw_loss, loss_calib, loss_calib_atleast, loss_calib_kernel, nb,
+        numerical_fix, no_browser, pdb_iter, prior_alpha, rep, rnn, samples,
+        sim_kwargs, seed, svi, train_kwargs, true_prior, units, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -216,8 +221,8 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
                     except IndexError:
                         bandwidth = loss_calib[-1]
                     kernel = Kernel(sim.obs, bandwidth=bandwidth,
-                                               fun=loss_calib_kernel,
-                                               spherical=True)
+                                    fun=loss_calib_kernel, spherical=True,
+                                    atleast=loss_calib_atleast)
                 else:
                     kernel = None
 
