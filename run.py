@@ -31,6 +31,23 @@ class ListIntParamType(click.ParamType):
         except ValueError:
             self.fail('%s is not a valid input' % value, param, ctx)
 
+class ListFloatParamType(click.ParamType):
+    name = 'list of floats'
+    def convert(self, value, param, ctx):
+        try:
+            if type(value) == list:
+                return value
+            elif type(value) == int:
+                return [float(value)]
+            elif type(value) == float:
+                return [value]
+            elif type(value) == str:
+                return [float(i) for i in value.replace('[','').replace(']','').replace(' ','').split(',')]
+            else:
+                raise ValueError
+        except ValueError:
+            self.fail('%s is not a valid input' % value, param, ctx)
+
 @click.command()
 @click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog']))
 @click.argument('prefix', type=str)
@@ -50,11 +67,15 @@ info during runtime.')
 reloading data generated in previous round.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
-@click.option('--loss-calib', type=float, default=None, show_default=True,
+@click.option('--loss-calib', type=ListFloatParamType(), default=None,
+              show_default=True,
               help='If provided, will do loss calibration with the kernel \
 specified as loss-calib-kernel centered on x_o. The bandwidth of the kernel \
-is determined by the float provided.')
-@click.option('--loss-calib-kernel', type=str, default='tricube', show_default=True,
+is determined by the floats provided. Provide a list to use different \
+bandwidths on subsequent rounds, e.g. large on the first round and then \
+shrinking.')
+@click.option('--loss-calib-kernel', type=str, default='tricube',
+              show_default=True,
               help='Kernel type used for loss calibration. Note that the loss \
 calibration kernel is only used, if the bandwidth specified as loss-calib is \
 not None.')
@@ -179,11 +200,6 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
         n_components = 0
         n_samples = []
 
-        if loss_calib is not None:
-            loss_calib_pdf = Kernel(sim.obs, bandwidth=loss_calib, fun=loss_calib_kernel, spherical=True)
-        else:
-            loss_calib_pdf = None
-
         for r in rep:
             n_components += 1
             for i in range(r):
@@ -194,9 +210,20 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
                     print('Run skipped!')
                     continue
 
+                if loss_calib is not None:
+                    try:
+                        bandwidth = loss_calib[iteration-1]
+                    except IndexError:
+                        bandwidth = loss_calib[-1]
+                    kernel = Kernel(sim.obs, bandwidth=bandwidth,
+                                               fun=loss_calib_kernel,
+                                               spherical=True)
+                else:
+                    kernel = None
+
                 if not created:
                     net, props = lfi.net_create(iw_loss=iw_loss,
-                                                loss_calib=loss_calib_pdf,
+                                                loss_calib=kernel,
                                                 n_components=n_components,
                                                 n_hiddens=units,
                                                 numerical_fix=numerical_fix,
@@ -218,7 +245,8 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
                     net, props = lfi.net_reload(n_components=n_components,
                                                 postfix='iter_{:04d}'.format(iteration-1),
                                                 prior_alpha=prior_alpha,
-                                                prior_proposal=approx_posterior)
+                                                prior_proposal=approx_posterior,
+                                                loss_calib=kernel)
 
                 try:
                     n_samples = samples[iteration-1]
