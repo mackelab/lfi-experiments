@@ -14,6 +14,7 @@ import sys
 import time
 
 from ast import literal_eval
+from likelihoodfree.Kernel import Kernel
 
 class ListIntParamType(click.ParamType):
     name = 'list of integers'
@@ -50,8 +51,13 @@ reloading data generated in previous round.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
 @click.option('--loss-calib', type=float, default=None, show_default=True,
-              help='If provided, will do loss calibration with Gaussian kernel \
-centered on x0. The variance of the kernel is determined by the float provided.')
+              help='If provided, will do loss calibration with the kernel \
+specified as loss-calib-kernel centered on x_o. The bandwidth of the kernel \
+is determined by the float provided.')
+@click.option('--loss-calib-kernel', type=str, default='tricube', show_default=True,
+              help='Kernel type used for loss calibration. Note that the loss \
+calibration kernel is only used, if the bandwidth specified as loss-calib is \
+not None.')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
 @click.option('--numerical-fix', default=False, is_flag=True, show_default=True,
@@ -97,9 +103,9 @@ equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
 def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
-        iw_loss, loss_calib, nb, numerical_fix, no_browser, pdb_iter,
-        prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi, train_kwargs,
-        true_prior, units, val):
+        iw_loss, loss_calib, loss_calib_kernel, nb, numerical_fix, no_browser,
+        pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi,
+        train_kwargs, true_prior, units, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -174,8 +180,7 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
         n_samples = []
 
         if loss_calib is not None:
-            loss_calib_pdf_mean = sim.obs.reshape(-1)
-            loss_calib_pdf = pdf.Gaussian(m=loss_calib_pdf_mean, S=loss_calib*np.eye(len(loss_calib_pdf_mean)))
+            loss_calib_pdf = Kernel(sim.obs, bandwidth=loss_calib, fun=loss_calib_kernel, spherical=True)
         else:
             loss_calib_pdf = None
 

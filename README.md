@@ -46,9 +46,14 @@ Options:
                               round.  [default: False]
   --iw-loss                   If provided, will use importance weighted loss.
                               [default: False]
-  --loss-calib FLOAT          If provided, will do loss calibration with
-                              Gaussian kernel centered on x0. The variance of
-                              the kernel is determined by the float provided.
+  --loss-calib FLOAT          If provided, will do loss calibration with the
+                              kernel specified as loss-calib-kernel centered
+                              on x_o. The bandwidth of the kernel is
+                              determined by the float provided.
+  --loss-calib-kernel TEXT    Kernel type used for loss calibration. Note that
+                              the loss calibration kernel is only used, if the
+                              bandwidth specified as loss-calib is not None.
+                              [default: tricube]
   --nb                        If provided, will call nb.py after fitting.
                               [default: False]
   --numerical-fix             Numerical fix (for the orginal epsilonfree
