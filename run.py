@@ -62,8 +62,8 @@ This requires a running worker process, which can be started with worker.py')
 info during runtime.')
 @click.option('--device', default='cpu', type=str, show_default=True,
               help='Device to compute on.')
-@click.option('--increase-data', default=False, is_flag=True, show_default=True,
-              help='If set, will increase the training data on each round by \
+@click.option('--accumulate-data', default=False, is_flag=True, show_default=True,
+              help='If set, will accumulate the training data on each round by \
 reloading data generated in previous round.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
@@ -128,7 +128,7 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
+def run(model, prefix, early_stopping, enqueue, debug, device, accumulate_data,
         iw_loss, loss_calib, loss_calib_atleast, loss_calib_kernel, nb,
         numerical_fix, no_browser, pdb_iter, prior_alpha, rep, rnn, samples,
         sim_kwargs, seed, svi, train_kwargs, true_prior, units, val):
@@ -263,7 +263,7 @@ def run(model, prefix, early_stopping, enqueue, debug, device, increase_data,
                 elif reg_init:
                     train_kwargs['reg_init'] = True
 
-                if increase_data and iteration != 1:
+                if accumulate_data and iteration != 1:
                     train_kwargs['load_trn'] = 'iter_{:04d}'.format(iteration-1)
 
                 if early_stopping and val > 0 and iteration != 1:

@@ -43,7 +43,7 @@ Options:
                                show more info during runtime.  [default:
                                False]
   --device TEXT                Device to compute on.  [default: cpu]
-  --increase-data              If set, will increase the training data on each
+  --accumulate-data              If set, will accumulate the training data on each
                                round by reloading data generated in previous
                                round.  [default: False]
   --iw-loss                    If provided, will use importance weighted loss.
