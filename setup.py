@@ -1,8 +1,10 @@
+import numpy as np
+
 from distutils.core import setup
 from Cython.Build import cythonize
 from setuptools import Extension, setup, find_packages
 
-extensions = [Extension('lfmods.hh_bm_cython_comp', ['lfmods/hh_bm_cython_comp.pyx'])]
+extensions = [Extension('lfmods.hh_bm_cython_comp', ['lfmods/hh_bm_cython_comp.pyx'], include_dirs = [np.get_include()])]
 
 setup(
     name='lfmods',
