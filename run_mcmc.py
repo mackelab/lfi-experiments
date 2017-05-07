@@ -59,7 +59,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
             print('Elliptical slice sampling for {}/{}'.format(model, prefix))
 
             # seeding
-            pg = PyPolyaGamma(seed=0) # TODO: check if this is correct
+            pg = PyPolyaGamma(seed=seed_sampler)
 
             # simulation protocol
             num_param_inf = len(gt)
