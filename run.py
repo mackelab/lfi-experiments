@@ -49,7 +49,7 @@ class ListFloatParamType(click.ParamType):
             self.fail('%s is not a valid input' % value, param, ctx)
 
 @click.command()
-@click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog']))
+@click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog','sqrt']))
 @click.argument('prefix', type=str)
 @click.option('--early-stopping', default=False, is_flag=True, show_default=True,
               help='If set, will do early stopping. Only works in combination with \
@@ -189,6 +189,8 @@ def run(model, prefix, early_stopping, enqueue, debug, device, accumulate_data,
                 sim_kwargs['summary_stats'] = 0
         elif model == 'mog':
             from lfmods.mog import MoGSimulator as Simulator
+        elif model == 'sqrt':
+            from lfmods.sqrt import SqrtSimulator as Simulator
         else:
             raise ValueError('could not import Simulator')
 
