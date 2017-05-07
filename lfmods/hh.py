@@ -22,6 +22,8 @@ class HHSimulator(SimulatorBase):
                  dir_cache='results/hh/data/',
                  duration=120,
                  obs_sim=True,
+                 ephys_cell=464212183,
+                 sweep_number=33,
                  pilot_samples=1000,
                  prior_uniform=True,
                  seed=None,
@@ -47,6 +49,11 @@ class HHSimulator(SimulatorBase):
         obs_sim : bool
             If True, will use simulation data for x0
             If False, will use cell form AllenDB for x0
+        ephys_cell : int
+            If obs_sim False, corresponds to cell identity from AllenDB
+        sweep_number : int
+            If obs_sim False, corresponds to stimulus identity for cell
+            ephys_cell from AllenDB
         pilot_samples : bool
             Number of pilot samples to generate, set to 0 to disable normalize
             of summary statistics
@@ -90,8 +97,9 @@ class HHSimulator(SimulatorBase):
         self.cached_sims = cached_sims
         self.cython = cython
         self.dir_cache = dir_cache
-        self.duration = duration
         self.obs_sim = obs_sim
+        self.ephys_cell = ephys_cell
+        self.sweep_number = sweep_number
         self.pilot_samples = pilot_samples
         self.step_current = step_current
         self.summary_stats = summary_stats
@@ -122,35 +130,88 @@ class HHSimulator(SimulatorBase):
 
         # parameters that globally govern the simulations
         self.init = [-70]  # =V0
-        self.t_offset = 0.
-        self.dt = 0.01
-        self.t = np.arange(0, self.duration+self.dt, self.dt)
-        self.t_on = 10
-        self.t_off = self.duration - self.t_on
+        if self.obs_sim:
+            self.t_offset = 0.
+            self.duration = duration
+            self.dt = 0.01
+            self.t_on = 10
+            self.t_off = self.duration - self.t_on
+            self.t = np.arange(0, self.duration+self.dt, self.dt)
 
-        # external current
-        self.A_soma = np.pi*((70.*1e-4)**2)  # cm2
-        self.curr_level = 5e-4  # uA
-        step_current = np.zeros_like(self.t)
-        step_current[int(np.round(self.t_on/self.dt)):int(np.round(self.t_off/self.dt))] = self.curr_level/self.A_soma
-        if self.step_current:
-            self.I = step_current
-        else:
-            if self.seed_input is None:
-                new_seed = self.gen_newseed()
+            # external current
+            self.A_soma = np.pi*((70.*1e-4)**2)  # cm2
+            self.curr_level = 5e-4  # mA
+            step_current = np.zeros_like(self.t)
+            step_current[int(np.round(self.t_on/self.dt)):int(np.round(self.t_off/self.dt))] = self.curr_level/self.A_soma
+            if self.step_current:
+                self.I = step_current
             else:
-                new_seed = self.seed_input
-            self.rng_input = np.random.RandomState(seed=new_seed)
+                if self.seed_input is None:
+                    new_seed = self.gen_newseed()
+                else:
+                    new_seed = self.seed_input
+                self.rng_input = np.random.RandomState(seed=new_seed)
 
-            times = np.linspace(0.0, self.duration, int(self.duration / self.dt) + 1)
-            I_new = step_current*1.
-            tau_n = 3.
-            nois_mn = 0.2*step_current
-            nois_fact = 2*step_current*np.sqrt(tau_n)
-            for i in range(1, times.shape[0]):
-                I_new[i] = I_new[i-1] + self.dt*(-I_new[i-1] + nois_mn[i-1] + nois_fact[i-1]*self.rng_input.normal(0)/(self.dt**0.5))/tau_n
-            self.I = I_new
-        self.I_obs = self.I.copy()
+                times = np.linspace(0.0, self.duration, int(self.duration / self.dt) + 1)
+                I_new = step_current*1.
+                tau_n = 3.
+                nois_mn = 0.2*step_current
+                nois_fact = 2*step_current*np.sqrt(tau_n)
+                for i in range(1, times.shape[0]):
+                    I_new[i] = I_new[i-1] + self.dt*(-I_new[i-1] + nois_mn[i-1] + nois_fact[i-1]*self.rng_input.normal(0)/(self.dt**0.5))/tau_n
+                self.I = I_new
+            self.I_obs = self.I.copy()
+        else:
+            # use real data
+            self.t_offset = 1015.
+            self.duration = 1250.
+            real_data_path = self.dir_cache + 'ephys_cell_{}_sweep_number_{}.pkl'.format(self.ephys_cell,self.sweep_number)
+            if not os.path.isfile(real_data_path):
+                from allensdk.core.cell_types_cache import CellTypesCache
+                from allensdk.api.queries.cell_types_api import CellTypesApi
+
+                manifest_file = 'cell_types/manifest.json'
+
+                cta = CellTypesApi()
+                ctc = CellTypesCache(manifest_file=manifest_file)
+                data_set = ctc.get_ephys_data(self.ephys_cell)
+                sweep_data = data_set.get_sweep(self.sweep_number)  # works with python2 and fails with python3
+                sweeps = cta.get_ephys_sweeps(self.ephys_cell)
+
+                sweep = sweeps[self.sweep_number]
+
+                index_range = sweep_data["index_range"]
+                i = sweep_data["stimulus"][0:index_range[1]+1] # in A
+                v = sweep_data["response"][0:index_range[1]+1] # in V
+                sampling_rate = sweep_data["sampling_rate"] # in Hz
+                dt = 1e3/sampling_rate # in ms
+                i *= 1e6 # to mA
+                v *= 1e3 # to mV
+                v = v[int(self.t_offset/dt):int((self.t_offset+self.duration)/dt)]
+                i = i[int(self.t_offset/dt):int((self.t_offset+self.duration)/dt)]
+
+
+                real_data_obs = np.array(v).reshape(-1,1)
+                I_real_data = np.array(i).reshape(-1)
+                t_on = int(sweep['stimulus_start_time']*sampling_rate)*dt-self.t_offset
+                t_off = int( (sweep['stimulus_start_time']+sweep['stimulus_duration'])*sampling_rate )*dt-self.t_offset
+
+                io.save((real_data_obs,I_real_data,dt,t_on,t_off), real_data_path)
+            else:
+                real_data_obs,I_real_data,dt,t_on,t_off = io.load(real_data_path)
+
+            self.dt = dt
+            self.t_on = t_on
+            self.t_off = t_off
+            self.t = np.arange(0, self.duration, self.dt)
+            self.real_data_obs = real_data_obs
+
+            # external current
+            self.A_soma = (np.max(I_real_data)/5e-4)*np.pi*((70.*1e-4)**2)  # cm2
+            self.curr_level = np.max(I_real_data)  # mA
+            step_current = I_real_data/self.A_soma
+            self.I = step_current
+            self.I_obs = self.I.copy()
 
         self.max_n_steps = 10000
         self.eps_sumstat = 0. # std of jitter in summary statistics
@@ -193,44 +254,8 @@ class HHSimulator(SimulatorBase):
             stats = self.calc_summary_stats(states)
         else:
             # use real data
-            from allensdk.core.cell_types_cache import CellTypesCache
-            from allensdk.api.queries.cell_types_api import CellTypesApi
-
-            manifest_file = 'cell_types/cell_types_manifest.json'
-            ephys_data = 464212183
-            sweep_number = 33
-
-            cta = CellTypesApi()
-            ctc = CellTypesCache(manifest_file=manifest_file)
-            data_set = ctc.get_ephys_data(ephys_data)
-
-            sweeps = cta.get_ephys_sweeps(ephys_data)  # works, but different keys in dict
-
-            #sweep_numbers = data_set.get_sweep_numbers()
-            sweep_data = data_set.get_sweep(sweep_number)  # this fails
-
-            index_range = sweep_data["index_range"]
-            i = sweep_data["stimulus"][0:index_range[1]+1] # in A
-            v = sweep_data["response"][0:index_range[1]+1] # in V
-            sampling_rate = sweep_data["sampling_rate"] # in Hz
-
-            i *= 1e12 # to pA
-            v *= 1e3 # to mV
-
-            v = v[int(self.t_offset*sampling_rate/1000):int((self.t_offset+self.duration)*sampling_rate/1000)]
-            i = i[int(self.t_offset*sampling_rate/1000):int((self.t_offset+self.duration)*sampling_rate/1000)]
-
-            states = np.array(v).reshape(-1,1)
-
-            times = np.arange(0, len(v)) * (1000 / sampling_rate)
-
-            # sub-sampling
-            # states = v[:,0::200]
-            # i = i[:,0::200]
-            # times = np.arange(0, len(v)) * (200.0 / sampling_rate)
-
+            states = self.real_data_obs
             stats = self.calc_summary_stats(states)
-
         self.obs_trace = states
         return stats
 
