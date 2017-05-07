@@ -7,6 +7,7 @@ import likelihoodfree.PDF as pdf
 import numpy as np
 import os
 import pdb
+import pickle
 import shelve
 import time
 
@@ -191,14 +192,20 @@ class HHSimulator(SimulatorBase):
                 i = i[int(self.t_offset/dt):int((self.t_offset+self.duration)/dt)]
 
 
-                real_data_obs = np.array(v).reshape(-1,1)
+                real_data_obs = np.array(v).reshape(1, -1, 1)
                 I_real_data = np.array(i).reshape(-1)
                 t_on = int(sweep['stimulus_start_time']*sampling_rate)*dt-self.t_offset
                 t_off = int( (sweep['stimulus_start_time']+sweep['stimulus_duration'])*sampling_rate )*dt-self.t_offset
 
                 io.save((real_data_obs,I_real_data,dt,t_on,t_off), real_data_path)
             else:
-                real_data_obs,I_real_data,dt,t_on,t_off = io.load(real_data_path)
+                def pickle_load(file):
+                    """Loads data from file."""
+                    f = open(file, 'rb')
+                    data = pickle.load(f, encoding='latin1')
+                    f.close()
+                    return data
+                real_data_obs,I_real_data,dt,t_on,t_off = pickle_load(real_data_path)
 
             self.dt = dt
             self.t_on = t_on
