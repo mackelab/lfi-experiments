@@ -97,16 +97,15 @@ class SqrtSimulator(SimulatorBase):
             return pdf.Uniform(lower=self.prior_min, upper=self.prior_max,
                                seed=self.gen_newseed())
 
-    @lazyprop
-    def posterior(self):
+    def posterior(self, x_obs1):
         """Calculates posterior analytically
         """
         if not self.prior_uniform:
             posterior_cov = np.linalg.inv(np.linalg.inv(self.prior_cov)+self.n_summary*np.linalg.inv(self.noise_cov))
-            posterior_mu = np.dot(posterior_cov, (self.n_summary*np.dot(np.linalg.inv(self.noise_cov), self.obs.reshape(-1))+np.dot(np.linalg.inv(self.prior_cov), self.prior_mean)))
+            posterior_mu = np.dot(posterior_cov, (self.n_summary*np.dot(np.linalg.inv(self.noise_cov), x_obs1.reshape(-1))+np.dot(np.linalg.inv(self.prior_cov), self.prior_mean)))
             return pdf.Gaussian(m=posterior_mu, S=posterior_cov)
         else:
-            posterior_mu = self.obs.reshape(-1)
+            posterior_mu = x_obs1.reshape(-1)
             posterior_cov = self.noise_cov/self.n_summary
             return pdf.Gaussian(m=posterior_mu, S=posterior_cov)
 
