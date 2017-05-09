@@ -53,7 +53,7 @@ def dryrun(name, queue=None, limit=None):
     global local
     def local(command, capture=False, shell=None):
         print("(dryrun)[localhost] %s" % (command))
-    run(name, queue=queue, limit=limit, browser=browser)
+    run(name, queue=queue, limit=limit)
 
 @task(alias='r')
 def run(name, queue=None, limit=None):
@@ -162,9 +162,9 @@ def run(name, queue=None, limit=None):
             elif 'true-prior' in k:
                 if v:
                     cmd += ' --true-prior'
-            elif 'increase-data' in k:
+            elif 'accumulate-data' in k or 'increase-data' in k:
                 if v:
-                    cmd += ' --increase-data'
+                    cmd += ' --accumulate-data'
             else:
                 cmd += ' --{k} {v}'.format(k=k, v=v)
 
