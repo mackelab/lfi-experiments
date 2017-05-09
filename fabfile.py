@@ -150,6 +150,16 @@ def run(name, queue=None, limit=None):
                 train_kwargs += ',tol=' + str(v)
             elif 'n-minibatch' in k:
                 train_kwargs += ',n_minibatch=' + str(v)
+            elif 'n-iter' in k:
+                train_kwargs += ',n_iter=' + str(v)                
+            elif 'keep-n' in k:
+                train_kwargs += ',keep_n=' + str(v)
+            elif 'normalize-weights' in k:
+                train_kwargs += ',normalize_weights=' + str(v)
+            elif 'ess-lc' in k:
+                train_kwargs += ',ess_lc=' + str(v)
+            elif 'ess' in k:
+                train_kwargs += ',ess=' + str(v)
             elif 'rnn' in k:
                 if int(v) > 0:
                     cmd += ' --rnn ' + str(v)
@@ -162,7 +172,7 @@ def run(name, queue=None, limit=None):
             elif 'true-prior' in k:
                 if v:
                     cmd += ' --true-prior'
-            elif 'accumulate-data' in k or 'increase-data' in k:
+            elif 'accumulate-data' in k or  'increase-data' in k:
                 if v:
                     cmd += ' --accumulate-data'
             else:

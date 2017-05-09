@@ -1,0 +1,20 @@
+prefix: shrinkv4
+comment: '# Shrinking posteriors
+
+shrinkv3: for some first results
+shrinkv4: accumulate data, no svi
+
+.'
+---
+model: hh
+iw-loss: True
+duration: np.geomspace(150, 1500, 5).astype(int)
+rnn: [10, 40]
+step-current: [False]
+seed: np.arange(2)
+rep: '2,1'
+cython: True
+samples: 500
+n_iter: 500
+accumulate-data: True
+n_minibatch: 250
