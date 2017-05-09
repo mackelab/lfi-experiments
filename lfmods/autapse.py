@@ -22,7 +22,7 @@ class AutapseSimulator(SimulatorBase):
                  dir_cache='results/autapse/data/',
                  duration=120,
                  pilot_samples=1000,
-                 prior_uniform=False,
+                 prior_uniform=True,
                  seed=None,
                  seed_obs=None,
                  summary_stats=1,
@@ -87,7 +87,7 @@ class AutapseSimulator(SimulatorBase):
             self.cached_sims = False
 
         # true parameters
-        self.true_params = np.array([0.1])
+        self.true_params = np.array([0.98])
         self.labels_params = ['J']
         self.labels_params = self.labels_params[0:len(self.true_params)]
         self.n_params = len(self.true_params)
@@ -95,7 +95,7 @@ class AutapseSimulator(SimulatorBase):
         # parameters that globally govern the simulations
         self.init = [0]  # =x[0]
         self.t_offset = 0.
-        self.dt = 0.01
+        self.dt = 0.01  # 10 to 100 times smaller than tau
         self.t = np.arange(0, self.duration+self.dt, self.dt)
         self.t_on = 10
         self.t_off = self.duration - self.t_on
@@ -142,7 +142,7 @@ class AutapseSimulator(SimulatorBase):
     @lazyprop
     def prior(self):
         range_lower = 0.5*self.true_params
-        range_upper = 1.5*self.true_params
+        range_upper = 2.0*self.true_params
 
         if self.prior_uniform:
             self.prior_min = range_lower
