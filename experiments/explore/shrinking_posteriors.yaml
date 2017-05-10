@@ -5,6 +5,8 @@ shrinkv3: for some first results
 shrinkv4: accumulate data, no svi
 shrinkv5: only 1 component
 
+todo: rep 5 to match # samples of fig3 or more samples/round in the first place
+todo: check how hard we subsample, training seems pretty quick right now
 .'
 ---
 model: hh

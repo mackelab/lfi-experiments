@@ -1,0 +1,31 @@
+prefix: iwv23
+comment: '# M o Gauss: Importance weighted loss
+
+## Question
+
+Are we sure the IW loss yields correct, unbiased solutions?
+
+## Approach
+
+Run different models, compare true vs predicted.
+
+## Results
+
+[WIP]'
+---
+model: mog
+dim: 1  #[1,2]
+iw_loss: [True, False]
+loss_calib: 0.0
+seed: np.arange(1, 10)
+svi: [True, False]
+rep: '3,1'
+prior_alpha: [0., 0.01, 0.1]
+prior_uniform: True  #[True, False]
+true_mean: [0.]
+n_summary: 10
+samples: 500
+val: 100
+keep_n: [True, False]
+normalize_weights: False
+ess: [True, False]
