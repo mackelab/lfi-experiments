@@ -1,47 +1,25 @@
 prefix: iwv25
 comment: '# Gauss: Importance weighted loss
 
-Preliminary results:
-
-- svi=F: good across prior_alphas, including alpha=0.
-
-- svi=T: everything bad, because KL term is weighted too strongly
-
-- svi=T & KL term weighed by 1/ESS instead of 1/N: good for alpha not equal zero, good even for alpha=0.01
-
-- svi=T & ess=T & normalizing importance weights: good for all alpha, including alpha=0
-
-- svi=T & ess=T & not normalizing importance weights but using loss calibration: good for all alphas, even better if ess_lc=T as well
-
-
-TODO:
-
-- svi=T & KL term multiplied by zero: good for all alpha?
-
-- analyse ESS weights
-
-- replicate on MoG and GLM
-
-
 Notes:
 - https://arxiv.org/pdf/1505.05424.pdf
 - hinton paper
 - maybe do not penalize on first rounds
 
 ...'
----
 model: gauss
-dim: 1  #[1,2]
-iw_loss: [True, False]
+dim: 1
 seed: np.arange(1, 8)
+accumulate_data: True
 svi: [True, False]
 rep: '4'
-prior_alpha: [0., 0.01, 0.05 , 0.1, 0.2]
 prior_uniform: True  #[True, False]
 true_mean: [0.]
 n_summary: 10
 samples: 500
 val: 100
-keep_n: [True, False]
-#normalize_weights: [True, False]
-ess: [True, False]
+---
+iw_loss: False
+---
+iw_loss: True
+prior_alpha: [0., 0.01, 0.05 , 0.1, 0.2]

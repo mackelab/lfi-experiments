@@ -69,7 +69,13 @@ def run(name, queue=None, limit=None):
     prefix = header['prefix'] + '_' if 'prefix' in header else ''
 
     i = 0
-    for runs in y[1:]:
+    for run_no in range(len(y[1:])):
+        runs = header.copy()
+        del runs['comment']
+        del runs['prefix']
+        for k, v in y[run_no+1].items():
+            runs[k] = v
+
         for k, v in runs.items():
             if type(v) == str and 'np.' in v:
                 v = eval(v)
@@ -190,7 +196,7 @@ def run(name, queue=None, limit=None):
 
             i += 1
 
-        print('\nNumber of runs: {}'.format(i))
+    print('\nNumber of runs: {}'.format(i))
 
 @task
 def start(cpus=CPUS_DEFAULT, gpus=GPUS_DEFAULT):
