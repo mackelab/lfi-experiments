@@ -1,4 +1,4 @@
-prefix: shrinkv5
+prefix: shrinkv6
 comment: '# Shrinking posteriors
 
 shrinkv3: for some first results
@@ -15,7 +15,7 @@ duration: np.geomspace(150, 1500, 5).astype(int)
 rnn: [10, 40]
 step-current: [False]
 seed: np.arange(2)+1
-rep: '3'
+rep: '5'
 cython: True
 samples: 500
 n_iter: 500
