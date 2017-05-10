@@ -51,6 +51,8 @@ class ListFloatParamType(click.ParamType):
 @click.command()
 @click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog','sqrt']))
 @click.argument('prefix', type=str)
+@click.option('--bad-data', default='discard', type=str, show_default=True,
+              help='Bad data handling strategy')
 @click.option('--early-stopping', default=False, is_flag=True, show_default=True,
               help='If set, will do early stopping. Only works in combination with \
 validation set, i.e., make sure that `--val` is greater zero.')
@@ -84,6 +86,9 @@ uniform kernel for which the desired fraction is non-zero.')
               help='Kernel type used for loss calibration. Note that the loss \
 calibration kernel is only used, if the bandwidth specified as loss-calib is \
 not None.')
+@click.option('--missing-features', default='discard', type=str,
+              show_default=True,
+              help='Missing feature handling strategy')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
               help='If provided, will call nb.py after fitting.')
 @click.option('--numerical-fix', default=False, is_flag=True, show_default=True,
@@ -128,10 +133,11 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, early_stopping, enqueue, debug, device, accumulate_data,
-        iw_loss, loss_calib, loss_calib_atleast, loss_calib_kernel, nb,
-        numerical_fix, no_browser, pdb_iter, prior_alpha, rep, rnn, samples,
-        sim_kwargs, seed, svi, train_kwargs, true_prior, units, val):
+def run(model, prefix, bad_data, early_stopping, enqueue, debug, device,
+        accumulate_data, iw_loss, loss_calib, loss_calib_atleast,
+        loss_calib_kernel, missing_features, nb, numerical_fix, no_browser,
+        pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi,
+        train_kwargs, true_prior, units, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -160,6 +166,9 @@ def run(model, prefix, early_stopping, enqueue, debug, device, accumulate_data,
             return {}
         else:
             return dict((k, literal_eval(v)) for k, v in (pair.split('=') for pair in s.split(',')))
+
+    inference_kwargs = {}
+    inference_kwargs['bad_data_indicator'] = lambda x: int(np.any(np.isnan(x.reshape(-1))))
     sim_kwargs = string_to_kwargs(sim_kwargs)
     train_kwargs = string_to_kwargs(train_kwargs)
 
@@ -172,6 +181,7 @@ def run(model, prefix, early_stopping, enqueue, debug, device, accumulate_data,
     try:
         if model == 'autapse':
             from lfmods.autapse import AutapseSimulator as Simulator
+            inference_kwargs['bad_data_indicator'] = lambda x: int(x.reshape(-1)[-1] > 100)
             if rnn is not None:
                 sim_kwargs['pilot_samples'] = 0
                 sim_kwargs['summary_stats'] = 0
@@ -199,8 +209,11 @@ def run(model, prefix, early_stopping, enqueue, debug, device, accumulate_data,
 
         lfi = Inference(prefix=prefix,
                         seed=seed,
+                        bad_data=bad_data,
                         sim=sim,
-                        **dirs)
+                        missing_features=missing_features,
+                        **dirs,
+                        **inference_kwargs)
 
         created = False
         iteration = 0
