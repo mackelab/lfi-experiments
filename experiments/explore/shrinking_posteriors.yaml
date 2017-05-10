@@ -12,7 +12,7 @@ iw-loss: True
 duration: np.geomspace(150, 1500, 5).astype(int)
 rnn: [10, 40]
 step-current: [False]
-seed: np.arange(2)
+seed: np.arange(2)+1
 rep: '3'
 cython: True
 samples: 500
