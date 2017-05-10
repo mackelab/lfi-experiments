@@ -36,13 +36,13 @@ class HH:
 
         # explictly cast everything to double precision
         t = t.astype(np.float64)
-        I = t.astype(np.float64)
+        I = I.astype(np.float64)
         V = np.zeros_like(t).astype(np.float64)  # baseline voltage
         n = np.zeros_like(t).astype(np.float64)
         m = np.zeros_like(t).astype(np.float64)
         h = np.zeros_like(t).astype(np.float64)
         p = np.zeros_like(t).astype(np.float64)
-        
+
         solver(t, I, V, m, n, h, p, tstep, fineness)
 
         return np.array(V).reshape(-1,1)
