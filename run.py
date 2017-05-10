@@ -51,6 +51,9 @@ class ListFloatParamType(click.ParamType):
 @click.command()
 @click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog','sqrt']))
 @click.argument('prefix', type=str)
+@click.option('--accumulate-data', default=False, is_flag=True, show_default=True,
+              help='If set, will accumulate the training data on each round by \
+reloading data generated in previous round.')
 @click.option('--bad-data', default='discard', type=str, show_default=True,
               help='Bad data handling strategy')
 @click.option('--early-stopping', default=False, is_flag=True, show_default=True,
@@ -64,9 +67,8 @@ This requires a running worker process, which can be started with worker.py')
 info during runtime.')
 @click.option('--device', default='cpu', type=str, show_default=True,
               help='Device to compute on.')
-@click.option('--accumulate-data', default=False, is_flag=True, show_default=True,
-              help='If set, will accumulate the training data on each round by \
-reloading data generated in previous round.')
+@click.option('--genetic', default=False, is_flag=True, show_default=True,
+              help='If provided, will run genetic algorithm after fit.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
 @click.option('--loss-calib', type=ListFloatParamType(), default=None,
@@ -95,6 +97,8 @@ not None.')
               help='Numerical fix (for the orginal epsilonfree method).')
 @click.option('--no-browser', default=False, is_flag=True, show_default=True,
               help='If provided, will not open plots of nb.py in browser.')
+@click.option('--mcmc', default=False, is_flag=True, show_default=True,
+              help='If provided, will run mcmc after fit.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
 @click.option('--prior-alpha', type=float, default=0.20, show_default=True,
@@ -133,9 +137,9 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, bad_data, early_stopping, enqueue, debug, device,
-        accumulate_data, iw_loss, loss_calib, loss_calib_atleast,
-        loss_calib_kernel, missing_features, nb, numerical_fix, no_browser,
+def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue, debug,
+        device, genetic, iw_loss, loss_calib, loss_calib_atleast,
+        loss_calib_kernel, mcmc, missing_features, nb, numerical_fix, no_browser,
         pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi,
         train_kwargs, true_prior, units, val):
     """Run model
@@ -316,6 +320,14 @@ def run(model, prefix, bad_data, early_stopping, enqueue, debug, device,
             else:
                 browser_flag = []
             subprocess.call([sys.executable, 'nb.py', model, prefix] + debug_flag + browser_flag)
+
+        if genetic:
+            print('Run genetic algorithm')
+            subprocess.call([sys.executable, 'run_genetic.py', model, prefix])
+
+        if mcmc:
+            print('Run MCMC')
+            subprocess.call([sys.executable, 'run_mcmc.py', model, prefix])
 
     except:
         t, v, tb = sys.exc_info()
