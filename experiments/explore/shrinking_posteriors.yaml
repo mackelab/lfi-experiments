@@ -1,8 +1,9 @@
-prefix: shrinkv4
+prefix: shrinkv5
 comment: '# Shrinking posteriors
 
 shrinkv3: for some first results
 shrinkv4: accumulate data, no svi
+shrinkv5: only 1 component
 
 .'
 ---
@@ -12,7 +13,7 @@ duration: np.geomspace(150, 1500, 5).astype(int)
 rnn: [10, 40]
 step-current: [False]
 seed: np.arange(2)
-rep: '2,1'
+rep: '3'
 cython: True
 samples: 500
 n_iter: 500
