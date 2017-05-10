@@ -13,7 +13,7 @@ from fabric.api import *
 from sklearn.model_selection import ParameterGrid, ParameterSampler
 
 CPUS_DEFAULT = 20
-GPUS_DEFAULT = 0
+GPUS_DEFAULT = 2
 TMUX_SESSION = 'lf'
 
 @task(alias='a')
@@ -60,7 +60,7 @@ def run(name, queue=None, limit=None):
     limit = parse_limit(limit)
 
     y = yaml_parse('experiments/' + name +'.yaml')
-    assert len(y) == 2, 'yaml needs header and body'
+    assert len(y) >= 2, 'yaml needs header and body'
 
     header = y[0]
     comment = header['comment'] if 'comment' in header else None
@@ -68,136 +68,129 @@ def run(name, queue=None, limit=None):
         limit = parse_limit(header['limit'])
     prefix = header['prefix'] + '_' if 'prefix' in header else ''
 
-    runs = y[1]
-    for k, v in runs.items():
-        if type(v) == str and 'np.' in v:
-            v = eval(v)
-            runs[k] = list(v)
-        elif type(v) == str and 'dist.' in v:
-            v = eval(v)
-            runs[k] = v
-            if limit is None:
-                raise ValueError('dist is used, limit required')
-        elif type(v) is not list:
-            runs[k] = [v]
+    i = 0
+    for runs in y[1:]:
+        for k, v in runs.items():
+            if type(v) == str and 'np.' in v:
+                v = eval(v)
+                runs[k] = list(v)
+            elif type(v) == str and 'dist.' in v:
+                v = eval(v)
+                runs[k] = v
+                if limit is None:
+                    raise ValueError('dist is used, limit required')
+            elif type(v) is not list:
+                runs[k] = [v]
 
-    grid = True if limit is None else False
-    if grid:
-        params = ParameterGrid(runs)
-    else:
-        params = ParameterSampler(runs, n_iter=limit)
+        grid = True if limit is None else False
+        if grid:
+            params = ParameterGrid(runs)
+        else:
+            params = ParameterSampler(runs, n_iter=limit)
 
-    pl = list(params)
-    for li in pl:
-        assert 'model' in li, 'model is required'
-        model = li.pop('model')
+        pl = list(params)
+        for li in pl:
+            assert 'model' in li, 'model is required'
+            model = li.pop('model')
 
-        uid = str(uuid.uuid4())[:8]
-        runname = prefix + uid
+            uid = str(uuid.uuid4())[:8]
+            runname = prefix + uid
 
-        cmd = "python run.py {m} {r}".format(m=model, r=runname)
+            cmd = "python run.py {m} {r}".format(m=model, r=runname)
 
-        sim_kwargs = ''
-        train_kwargs = ''
+            sim_kwargs = ''
+            train_kwargs = ''
 
-        for k, v in li.items():
-            k = k.replace('_', '-')  # avoid typos
-            if 1 == 2:
-                pass
-            elif 'bimodal' in k:
-                if model in ['mog']:
-                    sim_kwargs += ',cython=' + str(v)
-            elif 'cython' in k:
-                if model in ['hh']:
-                    sim_kwargs += ',cython=' + str(v)
-            elif 'dim' in k:
-                if model in ['gauss', 'mog']:
-                    sim_kwargs += ',dim=' + str(v)
-            elif 'n-summary' in k:
-                if model in ['gauss']:
-                    sim_kwargs += ',n_summary=' + str(v)
-            elif 'duration' in k:
-                if model in ['glm', 'hh']:
-                    sim_kwargs += ',duration=' + str(v)
-            elif 'prior-uniform' in k:
-                if model in ['gauss']:
-                    sim_kwargs += ',prior_uniform=' + str(v)
-            elif 'step-current' in k:
-                if model in ['hh']:
-                    sim_kwargs += ',step_current=' + str(v)
-            elif 'true-mean' in k:
-                if model in ['gauss']:
-                    sim_kwargs += ',true_mean=' + str(v)
-            elif 'seed-obs' in k:
-                if model in ['gauss', 'glm']:
-                    sim_kwargs += ',seed_obs=' + str(v)
-            elif 'loss-calib' in k:
-                if float(v) > 0.:
-                    cmd += ' --loss-calib ' + str(v)
-            elif 'reg-init' in k:
-                train_kwargs += ',reg_init=' + str(v)
-            elif 'reg-lambda' in k:
-                train_kwargs += ',reg_lambda=' + str(v)
-            elif 'reg-scale-iw' in k:
-                train_kwargs += ',reg_scale_iw=' + str(v)
-            elif 'reg-scale-lc' in k:
-                train_kwargs += ',reg_scale_lc=' + str(v)
-            elif 'reg-scale' in k:
-                train_kwargs += ',reg_scale=' + str(v)
-            elif 'tol-val' in k:
-                train_kwargs += ',tol_val=' + str(v)
-            elif 'tol' in k:
-                train_kwargs += ',tol=' + str(v)
-            elif 'n-minibatch' in k:
-                train_kwargs += ',n_minibatch=' + str(v)
-            elif 'n-iter' in k:
-                train_kwargs += ',n_iter=' + str(v)                
-            elif 'keep-n' in k:
-                train_kwargs += ',keep_n=' + str(v)
-            elif 'normalize-weights' in k:
-                train_kwargs += ',normalize_weights=' + str(v)
-            elif 'ess-lc' in k:
-                train_kwargs += ',ess_lc=' + str(v)
-            elif 'ess' in k:
-                train_kwargs += ',ess=' + str(v)
-            elif 'rnn' in k:
-                if int(v) > 0:
-                    cmd += ' --rnn ' + str(v)
-            elif 'iw-loss' in k:
-                if v:
-                    cmd += ' --iw-loss'
-            elif 'svi' in k:
-                if v:
-                    cmd += ' --svi'
-            elif 'true-prior' in k:
-                if v:
-                    cmd += ' --true-prior'
-            elif 'accumulate-data' in k or  'increase-data' in k:
-                if v:
-                    cmd += ' --accumulate-data'
-            else:
-                cmd += ' --{k} {v}'.format(k=k, v=v)
+            for k, v in li.items():
+                k = k.replace('_', '-')  # avoid typos
+                if 1 == 2:
+                    pass
+                elif 'bimodal' in k:
+                    if model in ['mog']:
+                        sim_kwargs += ',cython=' + str(v)
+                elif 'cython' in k:
+                    if model in ['hh']:
+                        sim_kwargs += ',cython=' + str(v)
+                elif 'dim' in k:
+                    if model in ['gauss', 'mog']:
+                        sim_kwargs += ',dim=' + str(v)
+                elif 'n-summary' in k:
+                    if model in ['gauss']:
+                        sim_kwargs += ',n_summary=' + str(v)
+                elif 'duration' in k:
+                    if model in ['glm', 'hh']:
+                        sim_kwargs += ',duration=' + str(v)
+                elif 'prior-uniform' in k:
+                    if model in ['gauss']:
+                        sim_kwargs += ',prior_uniform=' + str(v)
+                elif 'step-current' in k:
+                    if model in ['hh']:
+                        sim_kwargs += ',step_current=' + str(v)
+                elif 'true-mean' in k:
+                    if model in ['gauss']:
+                        sim_kwargs += ',true_mean=' + str(v)
+                elif 'seed-obs' in k:
+                    if model in ['gauss', 'glm']:
+                        sim_kwargs += ',seed_obs=' + str(v)
+                elif 'loss-calib' in k:
+                    if float(v) > 0.:
+                        cmd += ' --loss-calib ' + str(v)
+                elif 'reg-autoscale' in k:
+                    train_kwargs += ',reg_autoscale=' + str(v)
+                elif 'reg-init' in k:
+                    train_kwargs += ',reg_init=' + str(v)
+                elif 'reg-lambda' in k:
+                    train_kwargs += ',reg_lambda=' + str(v)
+                elif 'reg-scale' in k:
+                    train_kwargs += ',reg_scale=' + str(v)
+                elif 'tol-val' in k:
+                    train_kwargs += ',tol_val=' + str(v)
+                elif 'tol' in k:
+                    train_kwargs += ',tol=' + str(v)
+                elif 'n-minibatch' in k:
+                    train_kwargs += ',n_minibatch=' + str(v)
+                elif 'n-iter' in k:
+                    train_kwargs += ',n_iter=' + str(v)
+                elif 'rnn' in k:
+                    if int(v) > 0:
+                        cmd += ' --rnn ' + str(v)
+                elif 'iw-loss' in k:
+                    if v:
+                        cmd += ' --iw-loss'
+                elif 'svi' in k:
+                    if v:
+                        cmd += ' --svi'
+                elif 'true-prior' in k:
+                    if v:
+                        cmd += ' --true-prior'
+                elif 'accumulate-data' in k or 'increase-data' in k:
+                    if v:
+                        cmd += ' --accumulate-data'
+                else:
+                    cmd += ' --{k} {v}'.format(k=k, v=v)
 
-        if model in ['glm', 'hh']:
-            sim_kwargs += ',cached_pilot=False,cached_sims=False'
+            if model in ['glm', 'hh']:
+                sim_kwargs += ',cached_pilot=False,cached_sims=False'
 
-        if sim_kwargs != '':
-            cmd += ' --sim-kwargs ' + sim_kwargs[1:]
+            if sim_kwargs != '':
+                cmd += ' --sim-kwargs ' + sim_kwargs[1:]
 
-        if train_kwargs != '':
-            cmd += ' --train-kwargs ' + train_kwargs[1:]
+            if train_kwargs != '':
+                cmd += ' --train-kwargs ' + train_kwargs[1:]
 
-        if queue is None:
-            enqueue = 'cpu'
-            if 'rnn' in li and int(li['rnn']) != 0:
-                enqueue = 'gpu'
-                cmd += ' --device cuda0'
+            if queue is None:
+                enqueue = 'cpu'
+                if 'rnn' in li and int(li['rnn']) != 0:
+                    enqueue = 'gpu'
+                    cmd += ' --device cuda0'
 
-        cmd += ' --enqueue {q}'.format(q=enqueue)
+            cmd += ' --enqueue {q}'.format(q=enqueue)
 
-        local(cmd)
+            local(cmd)
 
-    print('\nNumber of runs: {}'.format(len(params)))
+            i += 1
+
+        print('\nNumber of runs: {}'.format(i))
 
 @task
 def start(cpus=CPUS_DEFAULT, gpus=GPUS_DEFAULT):
