@@ -138,6 +138,9 @@ def run(name, queue=None, limit=None):
                 elif 'seed-obs' in k:
                     if model in ['gauss', 'glm']:
                         sim_kwargs += ',seed_obs=' + str(v)
+                elif 'seed-input' in k:
+                    if model in ['gauss', 'glm']:
+                        sim_kwargs += ',seed_input=' + str(v)
                 elif 'loss-calib' in k:
                     if float(v) > 0.:
                         cmd += ' --loss-calib ' + str(v)
@@ -172,6 +175,9 @@ def run(name, queue=None, limit=None):
                 elif 'accumulate-data' in k or 'increase-data' in k:
                     if v:
                         cmd += ' --accumulate-data'
+                elif 'early-stopping' in k:
+                    if v:
+                        cmd += ' --early-stopping'
                 else:
                     cmd += ' --{k} {v}'.format(k=k, v=v)
 
@@ -189,6 +195,9 @@ def run(name, queue=None, limit=None):
                 if 'rnn' in li and int(li['rnn']) != 0:
                     enqueue = 'gpu'
                     cmd += ' --device cuda0'
+
+            if model in ['glm']:
+                cmd += ' --mcmc'
 
             cmd += ' --enqueue {q}'.format(q=enqueue)
 
