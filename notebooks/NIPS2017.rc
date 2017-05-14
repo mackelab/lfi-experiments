@@ -1,7 +1,7 @@
 # http://matplotlib.org/users/customizing.html
 
 text.usetex          : False 
-font.family          : serif
+font.family          : sans-serif
 #font.serif           : Computer Modern Roman
 font.serif           : Arial 
 font.size            : 12
