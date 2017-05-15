@@ -101,7 +101,7 @@ def addhyparam(name, default=None, ptype=None):
 
 # CALCULATE POSTERIOR
 @addtask('posterior')
-@addparam('x', 0, 10)
+@addparam('x', 0, 3.3)
 @addhyparam('sigma', 0.1, PositiveFloat)
 @addhyparam('eta', 1.0, PositiveFloat)
 @addhyparam('mu', 5, float)
@@ -179,16 +179,13 @@ def samplepts(n, num_cores, params, taskname, random = True):
 	draws = []
 
 	if random == False:
-		raise None
-# 	GRID SEARCH
-# 	for k in params.keys():
-# 		p = params[k]
-# 		pts = np.linspace(p[0],p[1],npertask * num_cores)
-# 		draws.append(pts.reshape((num_cores,npertask)))
+		for ptype in paramlist:
+			if ptype in tasklist[taskname][1]:
+				p = params[ptype[0]]
+				draws.append(np.linspace(p[0],p[1],num_cores * npertask).reshape((num_cores, npertask)))
 	else:
 		for ptype in paramlist:
 			if ptype in tasklist[taskname][1]:
-				print(ptype[0])
 				p = params[ptype[0]]
 				draws.append(np.random.uniform(p[0],p[1], (num_cores, npertask)))
 
@@ -271,8 +268,6 @@ def writeoutput(outname, taskname, results, hyparams, ptlist, overwrite):
 				raise IOError()
 
 
-			print(ptlist.shape)
-			print(indict['pts'].shape)
 			ptlist = np.concatenate((indict['pts'],ptlist))
 			results = np.concatenate((indict['data'],results))
 
@@ -297,7 +292,6 @@ def run(args):
 		j = 0
 		for i in range(len(paramlist)):
 			if paramlist[i] in tasklist[taskname][1]:
-				print(paramlist[i][0])
 				argdict[paramlist[i][0]] = pt[j]
 				j += 1
 		results.append(task(**argdict))
