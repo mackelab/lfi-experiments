@@ -3,7 +3,9 @@
 text.usetex          : False 
 font.family          : serif
 #font.serif           : Computer Modern Roman
-font.serif           : Arial 
+font.serif           : Helvetica, Arial, sans-serif 
+font.sans-serif      : Helvetica, Arial, sans-serif
+font.cursive         : Helvetica, Arial, sans-serif
 font.size            : 12
 legend.fontsize      : 12
 axes.labelsize       : 12
