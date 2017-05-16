@@ -97,7 +97,7 @@ class GLMSimulator(SimulatorBase):
 
         # true parameters: (b0, h) = offset, temporal filter
         b0=-2.
-        a = 0.5  # inverse time constant of the filter
+        a = 1.  # inverse time constant of the filter
         tau = np.linspace(1, self.len_filter, self.len_filter) # Support for the filter
         h = (a * tau)**3 * np.exp(-a * tau) # Temporal filter
         true_params = np.concatenate((np.array([b0]),h))
@@ -167,11 +167,12 @@ class GLMSimulator(SimulatorBase):
             # Smoothing prior on h; N(0, 1) on b0. Smoothness encouraged by
             # penalyzing 2nd order differences of filter elements
             D = np.diag(np.ones(self.n_params-1)) - np.diag(np.ones(self.n_params-2), -1)
-            F = np.dot(D, D)
-            # Binv is block diagonal
+            F = np.dot(D, D) + np.diag(1.0 * np.arange(self.n_params - 1)/(self.n_params-1))**0.5  # Binv is block diagonal
             Binv = np.zeros(shape=(self.n_params,self.n_params))
-            Binv[0,0] = 1    # offset (b0)
+            Binv[0,0] = 0.5    # offset (b0)
             Binv[1:,1:] = np.dot(F.T, F) # filter (h)
+
+            self.Binv = Binv
 
             prior_mn = self.true_params*0.
             prior_prec = Binv
