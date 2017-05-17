@@ -87,7 +87,7 @@ class AutapseSimulator(SimulatorBase):
             self.cached_sims = False
 
         # true parameters
-        self.true_params = np.array([0.98])
+        self.true_params = np.array([0.99])
         self.labels_params = ['J']
         self.labels_params = self.labels_params[0:len(self.true_params)]
         self.n_params = len(self.true_params)

@@ -54,7 +54,7 @@ class ListFloatParamType(click.ParamType):
 @click.option('--accumulate-data', default=False, is_flag=True, show_default=True,
               help='If set, will accumulate the training data on each round by \
 reloading data generated in previous round.')
-@click.option('--bad-data', default='discard', type=str, show_default=True,
+@click.option('--bad-data', default='resample', type=str, show_default=True,
               help='Bad data handling strategy')
 @click.option('--early-stopping', default=False, is_flag=True, show_default=True,
               help='If set, will do early stopping. Only works in combination with \
@@ -71,6 +71,9 @@ info during runtime.')
               help='If provided, will run genetic algorithm after fit.')
 @click.option('--iw-loss', default=False, is_flag=True, show_default=True,
               help='If provided, will use importance weighted loss.')
+@click.option('--learning-rate-scale', type=ListFloatParamType(), default=None,
+              show_default=True,
+              help='If provided, will scale learning rate accordingly.')
 @click.option('--loss-calib', type=ListFloatParamType(), default=None,
               show_default=True,
               help='If provided, will do loss calibration with the kernel \
@@ -83,12 +86,12 @@ shrinking.')
 zero for all x at which it is evaluated: Iff the fraction of weights returned \
 by the kernel are below the limit specified, the kernel will  will default to a \
 uniform kernel for which the desired fraction is non-zero.')
-@click.option('--loss-calib-kernel', type=str, default='tricube',
+@click.option('--loss-calib-kernel', type=str, default='uniform',
               show_default=True,
               help='Kernel type used for loss calibration. Note that the loss \
 calibration kernel is only used, if the bandwidth specified as loss-calib is \
 not None.')
-@click.option('--missing-features', default='discard', type=str,
+@click.option('--missing-features', default='resample', type=str,
               show_default=True,
               help='Missing feature handling strategy')
 @click.option('--nb', default=False, is_flag=True, show_default=True,
@@ -101,7 +104,7 @@ not None.')
               help='If provided, will run mcmc after fit.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
-@click.option('--prior-alpha', type=float, default=0.20, show_default=True,
+@click.option('--prior-alpha', type=float, default=0.0, show_default=True,
               help='If iw_loss is True, will use this alpha as weight for true \
 prior in proposal distribution.')
 @click.option('--rep', type=ListIntParamType(), default=[2,1], show_default=True,
@@ -137,11 +140,12 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
-def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue, debug,
-        device, genetic, iw_loss, loss_calib, loss_calib_atleast,
-        loss_calib_kernel, mcmc, missing_features, nb, numerical_fix, no_browser,
-        pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs, seed, svi,
-        train_kwargs, true_prior, units, val):
+def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue,
+        debug, device, genetic, iw_loss, learning_rate_scale,
+        loss_calib, loss_calib_atleast,
+        loss_calib_kernel, mcmc, missing_features, nb, numerical_fix,
+        no_browser, pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs,
+        seed, svi, train_kwargs, true_prior, units, val):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -175,6 +179,8 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue, debug
     inference_kwargs['bad_data_indicator'] = lambda x: int(np.any(np.isnan(x.reshape(-1))))
     sim_kwargs = string_to_kwargs(sim_kwargs)
     train_kwargs = string_to_kwargs(train_kwargs)
+
+    additional_info = {}
 
     # SVI: posterior over previous weights as prior
     if 'reg_init' in train_kwargs.keys() and train_kwargs['reg_init']:
@@ -234,6 +240,16 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue, debug
                     print('Run skipped!')
                     continue
 
+                default_learning_rate = 0.001
+                if learning_rate_scale is not None:
+                    try:
+                        lr_scale = learning_rate_scale[iteration-1]
+                    except IndexError:
+                        lr_scale = learning_rate_scale[-1]
+                else:
+                    lr_scale = 1
+                train_kwargs['learning_rate'] = lr_scale*default_learning_rate
+
                 if loss_calib is not None:
                     try:
                         bandwidth = loss_calib[iteration-1]
@@ -278,20 +294,33 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue, debug
                     n_samples = samples[-1]
 
                 if i == 0 and reg_init:
+                    # TODO: cover 2 component case
                     train_kwargs['reg_init'] = False  # do not use init as prior
                 elif reg_init:
                     train_kwargs['reg_init'] = True
 
-                if accumulate_data and iteration != 1:
+                if accumulate_data and iteration > 3:
                     train_kwargs['load_trn'] = 'iter_{:04d}'.format(iteration-1)
 
-                if early_stopping and val > 0 and iteration != 1:
+                additional_info['early_stopping'] = False
+                additional_info['early_stopping_iter'] = 0
+                if early_stopping and val > 0 and iteration != 1:  # > 3
                     path_prev_loss = '{}{}_iter_{:04d}_loss.pkl'.format(dirs['dir_nets'],
                         prefix, iteration-1)
                     prev_loss = io.load(path_prev_loss)
                     pdict = prev_loss['val_min_params']
                     print('Early stopping : Setting parameters to iteration {} of previous round.'.format(prev_loss['val_min_iter']))
                     net.set_params(pdict)
+                    additional_info['early_stopping'] = True
+                    additional_info['early_stopping_iter'] = prev_loss['val_min_iter']
+
+                # TODO: first fix, then make option from this
+                restore_adam = False
+                if restore_adam and iteration > 1:
+                    # TODO: cover adding component case
+                    path_adam = '{}{}_iter_{:04d}_adam.pkl'.format(dirs['dir_nets'], prefix, iteration-1)
+                    adam_state = io.load(path_adam)
+                    train_kwargs['load_adam'] = adam_state
 
                 if debug:
                     print('Net')
@@ -307,6 +336,7 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue, debug
                           net=net,
                           pdb_iter=pdb_iter,
                           postfix='iter_{:04d}'.format(iteration),
+                          additional_info=additional_info,
                           **train_kwargs)
 
         if nb:
