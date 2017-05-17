@@ -25,7 +25,7 @@ class AutapseSimulator(SimulatorBase):
                  prior_uniform=True,
                  seed=None,
                  seed_obs=None,
-                 summary_stats=1,
+                 summary_stats=2,
                  verbose=False):
         """Autapse simulator
 
@@ -87,7 +87,7 @@ class AutapseSimulator(SimulatorBase):
             self.cached_sims = False
 
         # true parameters
-        self.true_params = np.array([0.99])
+        self.true_params = np.array([0.5])
         self.labels_params = ['J']
         self.labels_params = self.labels_params[0:len(self.true_params)]
         self.n_params = len(self.true_params)
@@ -119,6 +119,8 @@ class AutapseSimulator(SimulatorBase):
         elif self.summary_stats == 1:  # moments
             self.n_xcorr = 5
             self.n_summary_stats = self.n_xcorr + 2
+        elif self.summary_stats == 2:  # mean
+            pass
         else:
             raise ValueError('summary_stats invalid')
 
@@ -142,7 +144,7 @@ class AutapseSimulator(SimulatorBase):
     @lazyprop
     def prior(self):
         range_lower = 0.5*self.true_params
-        range_upper = 2.0*self.true_params
+        range_upper = 0.75*self.true_params
 
         if self.prior_uniform:
             self.prior_min = range_lower
@@ -325,6 +327,9 @@ class AutapseSimulator(SimulatorBase):
                     np.array([x_mn,x_std]),
                     x_corr1
                 ))
+
+        elif self.summary_stats == 2:
+            return np.array([np.mean(x[(self.t > self.t_on) & (self.t < self.t_off)])]).reshape(-1,1)
 
         else:
             raise ValueError('summary_stats is invalid')

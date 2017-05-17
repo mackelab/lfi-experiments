@@ -57,7 +57,7 @@ def export_notebook_to_html(nb, notebook_filename_out):
         f.write(body)
 
 @click.command()
-@click.argument('model', type=click.Choice(['gauss', 'hh', 'mog']))
+@click.argument('model', type=click.Choice(['autapse', 'gauss', 'hh', 'mog']))
 @click.argument('prefix', type=str)
 @click.option('--browser/--no-browser', default=True, is_flag=True,
               help='If True, will open results HTML or notebook in browser')
