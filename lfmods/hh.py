@@ -27,7 +27,7 @@ class HHSimulator(SimulatorBase):
                  sweep_number=33,
                  pilot_samples=1000,
                  prior_uniform=True,
-                 prior_extent='small',
+                 prior_extent=False,
                  seed=None,
                  seed_obs=None,
                  seed_input=None,
@@ -109,6 +109,8 @@ class HHSimulator(SimulatorBase):
         self.step_current = step_current
         self.summary_stats = summary_stats
         self.verbose = verbose
+
+        self.prior_extent = prior_extent
 
         if cython:
             import lfmods.hh_bm_cython as bm
@@ -272,14 +274,12 @@ class HHSimulator(SimulatorBase):
 
     @lazyprop
     def prior(self):
-        if prior_extent == 'small':
+        if not self.prior_extent:
             range_lower = self.param_transform(0.5*self.true_params)
             range_upper = self.param_transform(1.5*self.true_params)
-        elif prior_extent == 'large':
+        else:
             range_lower = self.param_transform(0.01*self.true_params)
             range_upper = self.param_transform(3.*self.true_params)
-        else:
-            raise ValueError('prior_extent is invalid')
 
         if self.prior_uniform:
             self.prior_min = range_lower
@@ -375,7 +375,9 @@ class HHSimulator(SimulatorBase):
             cached_pilot_path = self.dir_cache + 'cached_pilot_seed_{}.pkl'.format(self.seed)
             d = shelve.open(cached_pilot_path)
 
-        for i in tqdm(range(self.pilot_samples)):
+        i = 0
+        while i < self.pilot_samples:
+            #for i in tqdm(range(self.pilot_samples)):
             params = self.sim_prior()
             hh_seed = self.gen_newseed()
 
@@ -388,10 +390,18 @@ class HHSimulator(SimulatorBase):
                 states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
                 states = states.reshape(1, -1, 1)
 
-            stats.append(self.calc_summary_stats(states, skip_norm=True))
+
+            sum_stats = self.calc_summary_stats(states, skip_norm=True)
+
+            if sum_stats is None or np.any(np.isnan(sum_stats)):
+                continue
+
+            stats.append(sum_stats)
 
             if self.cached_pilot and key not in d:
                 d[key] = states
+
+            i = i+1
 
         if self.cached_pilot:
             d.close()
@@ -474,12 +484,15 @@ class HHSimulator(SimulatorBase):
             moments = spstats.moment(x[(self.t > self.t_on) & (self.t < self.t_off)], np.linspace(2,self.n_mom+1,self.n_mom))
 
             # concatenation of summary statistics
-            sum_stats_vec = np.concatenate((
-                    np.array([spike_times_stim.shape[0]]),
-                    x_corr1,
-                    np.array([rest_pot,np.mean(x[(self.t > self.t_on) & (self.t < self.t_off)])]),
-                    moments
-                ))
+            try:
+                sum_stats_vec = np.concatenate((
+                        np.array([spike_times_stim.shape[0]]),
+                        x_corr1,
+                        np.array([rest_pot,np.mean(x[(self.t > self.t_on) & (self.t < self.t_off)])]),
+                        moments
+                    ))
+            except:
+                return None
 
         elif self.summary_stats == 2:  # hand-crafted summary statistics
             if spike_times_stim.shape[0] == 0:

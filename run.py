@@ -176,7 +176,7 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue,
             return dict((k, literal_eval(v)) for k, v in (pair.split('=') for pair in s.split(',')))
 
     inference_kwargs = {}
-    inference_kwargs['bad_data_indicator'] = lambda x: int(np.any(np.isnan(x.reshape(-1))))
+    inference_kwargs['bad_data_indicator'] = lambda x: int(np.any(np.isnan(x.reshape(-1)))) or x is None
     sim_kwargs = string_to_kwargs(sim_kwargs)
     train_kwargs = string_to_kwargs(train_kwargs)
 
