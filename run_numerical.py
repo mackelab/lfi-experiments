@@ -99,14 +99,14 @@ def addhyparam(name, default=None, ptype=None):
 
 	return lambda x: x
 
-# CALCULATE POSTERIOR
-@addtask('posterior')
-@addparam('x', 0, 3.3)
+# SQRT MODEL
+@addtask('sqrt')
+@addparam('x', 1, 3.3)
 @addhyparam('sigma', 0.1, PositiveFloat)
 @addhyparam('eta', 1.0, PositiveFloat)
 @addhyparam('mu', 5, float)
 @addhyparam('kernel', 0.0, Positive0Float)
-@addhyparam('x0', 1.47, float)
+@addhyparam('x0', 2.23, float)
 @addhyparam('nsamples', 1000000, PositiveInt)
 def posterior(x, x0, kernel, sigma, eta, mu, nsamples, **kwargs):
 	thetas = np.random.normal(mu, eta, size = nsamples)
@@ -200,10 +200,10 @@ def init_worker():
 @click.argument('output', type=str)
 @click.option('--num-cores', type=PositiveInt, default=4, help='Number of cores used')
 @click.option('--nsims', type=PositiveInt, default=100, help='Number of points simulated')
-@click.option('--random-sample/--no-random-sample', default=True, help='Sample parameters randomly instead of using a grid')
+@click.option('--random-samples/--no-random-samples', default=True, help='Sample parameters randomly instead of using a grid')
 @click.option('--overwrite/--no-overwrite', default=False, help='Overwrite previously existing output files')
 @addtaskparams
-def main(output, taskname, num_cores, nsims, overwrite, random_sample, **params):
+def main(output, taskname, num_cores, nsims, overwrite, random_samples, **params):
 	pool = mp.Pool(num_cores, init_worker)
 	hyparams = {}
 	for k in params.keys():
@@ -219,7 +219,7 @@ def main(output, taskname, num_cores, nsims, overwrite, random_sample, **params)
 	for k in hyparams.keys():
 		del params[k]
 
-	taskqueue = samplepts(nsims, num_cores, params, taskname, random_sample)
+	taskqueue = samplepts(nsims, num_cores, params, taskname, random_samples)
 	argslist = [('{}{}'.format(output,i),taskqueue[i],hyparams,taskname) for i in range(num_cores)]
 
 	try:

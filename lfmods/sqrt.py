@@ -21,7 +21,7 @@ class SqrtSimulator(SimulatorBase):
                  prior_mean=5.0,
                  seed=None,
                  seed_obs=None,
-                 true_mean=3.0):
+                 true_mean=2.230):
         """Square-root simulator
 
         Parameters
@@ -86,6 +86,7 @@ class SqrtSimulator(SimulatorBase):
         self.x0_sample = self.x0_distrib.gen(self.n_summary)
         self.x0_sample_mean = np.mean(self.x0_sample, axis=0)
 
+        return 2.230 * np.ones(self.n_summary).reshape(1,-1)
         return np.array([self.x0_sample_mean]).reshape(1, -1)  # 1 x dim summary stats
 
     @lazyprop
