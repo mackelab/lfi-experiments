@@ -27,6 +27,7 @@ class HHSimulator(SimulatorBase):
                  sweep_number=33,
                  pilot_samples=1000,
                  prior_uniform=True,
+                 prior_extent='small',
                  seed=None,
                  seed_obs=None,
                  seed_input=None,
@@ -60,6 +61,9 @@ class HHSimulator(SimulatorBase):
             of summary statistics
         prior_uniform : bool
             Flag to switch between Gaussian and uniform prior
+        prior_extent : str
+            If 'small', uniform prior [0.5*true_params;1.5*true_params]
+            If 'large', uniform prior [0.01*true_params;3*true_params]
         seed : int or None
             If set, randomness across runs is disabled
         seed_obs : int or None
@@ -268,8 +272,14 @@ class HHSimulator(SimulatorBase):
 
     @lazyprop
     def prior(self):
-        range_lower = self.param_transform(0.5*self.true_params)
-        range_upper = self.param_transform(1.5*self.true_params)
+        if prior_extent == 'small':
+            range_lower = self.param_transform(0.5*self.true_params)
+            range_upper = self.param_transform(1.5*self.true_params)
+        elif prior_extent == 'large':
+            range_lower = self.param_transform(0.01*self.true_params)
+            range_upper = self.param_transform(3.*self.true_params)
+        else:
+            raise ValueError('prior_extent is invalid')
 
         if self.prior_uniform:
             self.prior_min = range_lower
