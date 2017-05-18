@@ -21,7 +21,7 @@ class AutapseSimulator(SimulatorBase):
                  cached_sims=False,
                  dir_cache='results/autapse/data/',
                  duration=120,
-                 pilot_samples=1000,
+                 pilot_samples=0,
                  prior_uniform=True,
                  seed=None,
                  seed_obs=None,
@@ -87,7 +87,7 @@ class AutapseSimulator(SimulatorBase):
             self.cached_sims = False
 
         # true parameters
-        self.true_params = np.array([0.5])
+        self.true_params = np.array([0.95])
         self.labels_params = ['J']
         self.labels_params = self.labels_params[0:len(self.true_params)]
         self.n_params = len(self.true_params)
@@ -143,8 +143,8 @@ class AutapseSimulator(SimulatorBase):
 
     @lazyprop
     def prior(self):
-        range_lower = 0.5*self.true_params
-        range_upper = 0.75*self.true_params
+        range_lower = np.array([0.8]).reshape(1)  #0.5*self.true_params
+        range_upper = np.array([2.0]).reshape(1)  #3.*self.true_params
 
         if self.prior_uniform:
             self.prior_min = range_lower

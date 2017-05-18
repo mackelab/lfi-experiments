@@ -191,7 +191,7 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue,
     try:
         if model == 'autapse':
             from lfmods.autapse import AutapseSimulator as Simulator
-            inference_kwargs['bad_data_indicator'] = lambda x: int(x.reshape(-1)[-1] > 100)
+            inference_kwargs['bad_data_indicator'] = lambda x: int(np.abs(x.reshape(-1)[-1]) > 1000)
             if rnn is not None:
                 sim_kwargs['pilot_samples'] = 0
                 sim_kwargs['summary_stats'] = 0

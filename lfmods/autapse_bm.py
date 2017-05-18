@@ -22,8 +22,8 @@ class Autapse:
         ####################################
         # fixed parameters
         tau_x = 1         # time constant; 10 originally; 1 might blow up to nans / 0.1
-        nois_fact = 0.5    # dynamics noise
-        nois_fact_obs = 0. # observation noise
+        nois_fact = 15    # dynamics noise
+        nois_fact_obs = 0.25 # observation noise
 
         ####################################
         # simulation from initial point
