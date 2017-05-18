@@ -101,17 +101,17 @@ def addhyparam(name, default=None, ptype=None):
 
 # SQRT MODEL
 @addtask('sqrt')
-@addparam('x', 0, 3.3)
-@addhyparam('sigma', 0.1, PositiveFloat)
+@addparam('x', 0, np.sqrt(10))
+@addhyparam('sigma', 0.05, PositiveFloat)
 @addhyparam('eta', 3.0, PositiveFloat)
-@addhyparam('mu', 7, float)
+@addhyparam('mu', 5.0, float)
 @addhyparam('kernel', 0.0, Positive0Float)
-@addhyparam('x0', 2.23, float)
+@addhyparam('x0', 1.333, float)
 @addhyparam('nsamples', 1000000, PositiveInt)
 def posterior(x, x0, kernel, sigma, eta, mu, nsamples, **kwargs):
 	thetas = np.random.normal(mu, eta, size = nsamples)
 	if kernel == 0:
-		prep = gauss1D(x,np.sqrt(np.abs(thetas)), sigma) 
+		prep = gauss1D(x, np.sign(thetas) * (np.abs(thetas)) ** 0.3333, sigma) 
 	else:
 		prep = gauss1D(x,np.sqrt(np.abs(thetas)), sigma) * gauss1D(x,x0,kernel ** 2)
 	post = prep / np.sum(prep)

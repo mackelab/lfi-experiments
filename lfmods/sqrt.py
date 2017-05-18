@@ -14,14 +14,14 @@ class SqrtSimulator(SimulatorBase):
     def __init__(self,
                  dim=1,
                  n_summary=1,
-                 noise_cov=0.1,
+                 noise_cov=0.05,
                  prior_uniform=False,
                  prior_abslim=10.0,
-                 prior_cov=9.0,
-                 prior_mean=7.0,
+                 prior_cov=3.0,
+                 prior_mean=5.0,
                  seed=None,
                  seed_obs=None,
-                 true_mean=1.333):
+                 true_mean=1.278):
         """Square-root simulator
 
         Parameters
@@ -86,7 +86,7 @@ class SqrtSimulator(SimulatorBase):
         self.x0_sample = self.x0_distrib.gen(self.n_summary)
         self.x0_sample_mean = np.mean(self.x0_sample, axis=0)
 
-        return np.array([self.x0_sample_mean]).reshape(1, -1)  # 1 x dim summary stats
+        return np.array([1.278]).reshape(1, -1)  # 1 x dim summary stats
 
     @lazyprop
     def prior(self):
@@ -145,6 +145,6 @@ class SqrtSimulator(SimulatorBase):
         assert theta.shape[0] == self.dim, 'theta.shape[0] must be dim theta long'
         assert n_samples == 1, 'assert n_samples > 1 not supported'
 
-        samples = pdf.Gaussian(m=np.sqrt(theta), S=self.noise_cov,
+        samples = pdf.Gaussian(m=np.sign(theta) * np.abs(theta) ** 0.3333, S=self.noise_cov,
                                seed=self.gen_newseed()).gen(self.n_summary)
         return samples[np.newaxis, :, :]
