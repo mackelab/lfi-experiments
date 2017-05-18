@@ -17,11 +17,13 @@ class Autapse:
 
         J = self.params[0,0]
         J.astype(float)
+        tau_x = self.params[0,1]
+        tau_x.astype(float)
         tstep = float(dt)
 
         ####################################
         # fixed parameters
-        tau_x = 1         # time constant; 10 originally; 1 might blow up to nans / 0.1
+        # tau_x = 1         # time constant; 10 originally; 1 might blow up to nans / 0.1
         nois_fact = 15    # dynamics noise
         nois_fact_obs = 0.25 # observation noise
 
