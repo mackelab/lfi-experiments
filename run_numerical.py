@@ -101,10 +101,10 @@ def addhyparam(name, default=None, ptype=None):
 
 # SQRT MODEL
 @addtask('sqrt')
-@addparam('x', 1, 3.3)
+@addparam('x', 0, 3.3)
 @addhyparam('sigma', 0.1, PositiveFloat)
-@addhyparam('eta', 1.0, PositiveFloat)
-@addhyparam('mu', 5, float)
+@addhyparam('eta', 3.0, PositiveFloat)
+@addhyparam('mu', 7, float)
 @addhyparam('kernel', 0.0, Positive0Float)
 @addhyparam('x0', 2.23, float)
 @addhyparam('nsamples', 1000000, PositiveInt)

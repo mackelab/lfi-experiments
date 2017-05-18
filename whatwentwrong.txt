@@ -1,0 +1,3 @@
+Weird error in round 1:
+
+run.py sqrt --units [25,25] --rep 3 --samples 5000 --svi --train-kwargs reg_init=True --iw-loss

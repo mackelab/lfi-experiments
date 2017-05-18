@@ -17,8 +17,8 @@ class SqrtSimulator(SimulatorBase):
                  noise_cov=0.1,
                  prior_uniform=False,
                  prior_abslim=10.0,
-                 prior_cov=3.0,
-                 prior_mean=6.0,
+                 prior_cov=9.0,
+                 prior_mean=7.0,
                  seed=None,
                  seed_obs=None,
                  true_mean=1.333):
@@ -86,7 +86,6 @@ class SqrtSimulator(SimulatorBase):
         self.x0_sample = self.x0_distrib.gen(self.n_summary)
         self.x0_sample_mean = np.mean(self.x0_sample, axis=0)
 
-        return 2.230 * np.ones(self.n_summary).reshape(1,-1)
         return np.array([self.x0_sample_mean]).reshape(1, -1)  # 1 x dim summary stats
 
     @lazyprop
