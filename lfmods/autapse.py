@@ -143,7 +143,7 @@ class AutapseSimulator(SimulatorBase):
 
     @lazyprop
     def prior(self):
-        range_lower = np.array([0.8,0.2])  #0.5*self.true_params
+        range_lower = np.array([0.1,-1.])  #0.5*self.true_params
         range_upper = np.array([2.0,2.5])  #3.*self.true_params
 
         if self.prior_uniform:
