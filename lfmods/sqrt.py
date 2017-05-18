@@ -17,11 +17,11 @@ class SqrtSimulator(SimulatorBase):
                  noise_cov=0.1,
                  prior_uniform=False,
                  prior_abslim=10.0,
-                 prior_cov=2.0,
+                 prior_cov=3.0,
                  prior_mean=6.0,
                  seed=None,
                  seed_obs=None,
-                 true_mean=2.230):
+                 true_mean=1.333):
         """Square-root simulator
 
         Parameters
