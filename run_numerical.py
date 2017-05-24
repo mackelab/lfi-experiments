@@ -102,11 +102,11 @@ def addhyparam(name, default=None, ptype=None):
 # SQRT MODEL
 @addtask('sqrt')
 @addparam('x', 0, np.sqrt(10))
-@addhyparam('sigma', 0.05, PositiveFloat)
+@addhyparam('sigma', 0.1, PositiveFloat)
 @addhyparam('eta', 3.0, PositiveFloat)
 @addhyparam('mu', 5.0, float)
 @addhyparam('kernel', 0.0, Positive0Float)
-@addhyparam('x0', 1.333, float)
+@addhyparam('x0', 1.374, float)
 @addhyparam('nsamples', 1000000, PositiveInt)
 def posterior(x, x0, kernel, sigma, eta, mu, nsamples, **kwargs):
 	thetas = np.random.normal(mu, eta, size = nsamples)

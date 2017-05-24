@@ -14,7 +14,7 @@ class SqrtSimulator(SimulatorBase):
     def __init__(self,
                  dim=1,
                  n_summary=1,
-                 noise_cov=0.05,
+                 noise_cov=0.1,
                  prior_uniform=False,
                  prior_abslim=10.0,
                  prior_cov=3.0,

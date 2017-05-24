@@ -140,12 +140,14 @@ the number of units per fully connected hidden layer. The length of the list \
 equals the number of hidden layers.')
 @click.option('--val', type=int, default=0, show_default=True,
               help='Number of samples for validation.')
+@click.option('--heavy-tails', default=False, is_flag=True, show_default=True,
+              help='Use heavy-tailed distributions for sampling')
 def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue,
         debug, device, genetic, iw_loss, learning_rate_scale,
         loss_calib, loss_calib_atleast,
         loss_calib_kernel, mcmc, missing_features, nb, numerical_fix,
         no_browser, pdb_iter, prior_alpha, rep, rnn, samples, sim_kwargs,
-        seed, svi, train_kwargs, true_prior, units, val):
+        seed, svi, train_kwargs, true_prior, units, val, heavy_tails):
     """Run model
 
     Call run.py together with a prefix and a model to run.
@@ -277,6 +279,9 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue,
 
                     if not iw_loss:
                         prior_alpha = None
+
+                    if heavy_tails == True:
+                        approx_posterior = approx_posterior.converttoT(1)
 
                     if true_prior:
                         prior_alpha = None
