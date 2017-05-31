@@ -17,8 +17,8 @@ from tqdm import tqdm
 
 class HHSimulator(SimulatorBase):
     def __init__(self,
-                 cached_pilot=True,
-                 cached_sims=True,
+                 cached_pilot=False,
+                 cached_sims=False,
                  cython=False,
                  dir_cache='results/hh/data/',
                  duration=120,
@@ -376,32 +376,35 @@ class HHSimulator(SimulatorBase):
             d = shelve.open(cached_pilot_path)
 
         i = 0
-        while i < self.pilot_samples:
-            #for i in tqdm(range(self.pilot_samples)):
-            params = self.sim_prior()
-            hh_seed = self.gen_newseed()
+        progressbar = tqdm(total=self.pilot_samples)
+        with progressbar as pbar:
+            while i < self.pilot_samples:
+                #for i in tqdm(range(self.pilot_samples)):
+                params = self.sim_prior()
+                hh_seed = self.gen_newseed()
 
-            key = self._hash(hh_seed, np.sum(params))
+                key = self._hash(hh_seed, np.sum(params))
 
-            if self.cached_pilot and key in d:
-                states = d[key]
-            else:
-                hh = self.bm.HH(self.init, params.reshape(1, -1), seed=hh_seed)
-                states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
-                states = states.reshape(1, -1, 1)
+                if self.cached_pilot and key in d:
+                    states = d[key]
+                else:
+                    hh = self.bm.HH(self.init, params.reshape(1, -1), seed=hh_seed)
+                    states = hh.sim_time(self.dt, self.t, self.I, max_n_steps=self.max_n_steps)
+                    states = states.reshape(1, -1, 1)
 
 
-            sum_stats = self.calc_summary_stats(states, skip_norm=True)
+                sum_stats = self.calc_summary_stats(states, skip_norm=True)
 
-            if sum_stats is None or np.any(np.isnan(sum_stats)):
-                continue
+                if sum_stats is None or np.any(np.isnan(sum_stats)):
+                    continue
 
-            stats.append(sum_stats)
+                stats.append(sum_stats)
 
-            if self.cached_pilot and key not in d:
-                d[key] = states
+                if self.cached_pilot and key not in d:
+                    d[key] = states
 
-            i = i+1
+                i = i+1
+                pbar.update(1)
 
         if self.cached_pilot:
             d.close()
@@ -588,8 +591,8 @@ class HHSimulator(SimulatorBase):
         else:
             raise ValueError('summary_stats is invalid')
 
-        if np.isnan(sum_stats_vec).any():
-            print(sum_stats_vec)
+        #if np.isnan(sum_stats_vec).any():
+            #print(sum_stats_vec)
             #import pdb; pdb.set_trace()
 
         # pilot run normalization
