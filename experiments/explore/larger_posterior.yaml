@@ -1,0 +1,16 @@
+prefix: lpv1
+comment: 'Larger posterior'
+---
+model: hh
+iw-loss: True
+duration: np.geomspace(150, 1500, 5).astype(int)
+rnn: [10, 40]
+step-current: [False]
+seed: np.arange(2)+1
+rep: '5'
+cython: True
+samples: 25000
+n_components: 5
+prior_extend: True
+n_iter: 500
+n_minibatch: 250
