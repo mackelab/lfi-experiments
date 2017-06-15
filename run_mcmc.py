@@ -8,6 +8,7 @@ import likelihoodfree.PDF as lfpdf
 import numpy as np
 import pdb
 import os
+import scipy.misc
 import sys
 
 from likelihoodfree.io import first, last, nth
@@ -21,7 +22,7 @@ from tqdm import tqdm
 @click.argument('model', type=str)
 @click.argument('prefix', type=str)
 @click.option('--algo', type=str, default='ess', show_default=True, help="Determines \
-which MCMC algorithm is run, so far only ess is implemented.")
+which MCMC algorithm is run, so far only ess and smc(-abc) are implemented.")
 @click.option('--debug', default=True, is_flag=True, show_default=True,
               help='If provided, will enter debugger on error and show more \
 info during runtime.')
@@ -38,6 +39,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
     dirs = {}
     dirs['dir_nets'] = 'results/'+model+'/nets/'
     dirs['dir_sampler'] = 'results/'+model+'/sampler/'
+    dirs['dir_smc'] = 'results/'+model+'/smc/'
     for k, v in dirs.items():
         if not os.path.exists(v):
             os.makedirs(v)
@@ -45,7 +47,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
     np.random.seed(seed_np)
 
     try:
-        # load data from NSPE model
+        # load data from SNPE model
         dists, infos, losses, nets, posteriors, sims = io.load_prefix(dirs['dir_nets'], prefix)
         sim = io.last(sims)
         obs_stats = sim.obs
@@ -149,7 +151,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
             dist = [cur_dist]
             n_accepted = 0
 
-            for i in xrange(n_samples):
+            for i in range(n_samples):
 
                 prop_ps = cur_ps + step * rng.randn(n_dim)
                 _, _, _, idts, _ = sim_likelihood(*prop_ps)
@@ -181,23 +183,19 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
         elif algo == 'smc':
             print('Sequential Monte Carlo for {}/{}'.format(model, prefix))
 
-            pass
-            """
-            # from epsilonfree code, needs to be adopted
+            # from epsilonfree code
             # https://raw.githubusercontent.com/gpapamak/epsilon_free_inference/8c237acdb2749f3a340919bf40014e0922821b86/demos/mg1_queue_demo/mg1_abc.py
 
-            # Runs sequential monte carlo abc and saves results
+            # Runs Sequential Monte Carlo ABC and saves results
 
             # set parameters
             n_particles = 1000
-            eps_init = 0.1
-            eps_last = 0.001
+            eps_init = 10
+            eps_last = 0.1
             eps_decay = 0.9
             ess_min = 0.5
 
-            # load observed data
-            _, obs_stats = helper.load(datadir + 'observed_data.pkl')
-            n_dim = 3
+            n_dim = len(gt)
 
             all_ps = []
             all_logweights = []
@@ -212,15 +210,15 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
             iter = 0
             nsims = 0
 
-            for i in xrange(n_particles):
+            for i in range(n_particles):
 
                 dist = float('inf')
 
                 while dist > eps:
-                    ps[i] = sim_prior()
-                    _, _, _, idts, _ = sim_likelihood(*ps[i])
-                    stats = calc_summary_stats(idts)
-                    dist = calc_dist(stats, obs_stats)
+                    ps[i] = sim.sim_prior(n_samples=1)[0]
+                    states = sim.forward_model(ps[i], n_samples=1)
+                    stats = sim.calc_summary_stats(states)
+                    dist = sim.calc_dist(stats, obs_stats)
                     nsims += 1
 
             all_ps.append(ps)
@@ -228,7 +226,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
             all_eps.append(eps)
             all_nsims.append(nsims)
 
-            print 'iteration = {0}, eps = {1:.2}, ess = {2:.2%}'.format(iter, eps, 1.0)
+            print('iteration = {0}, eps = {1:.2}, ess = {2:.2%}'.format(iter, float(eps), 1.0))
 
             while eps > eps_last:
 
@@ -236,28 +234,30 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
                 eps *= eps_decay
 
                 # calculate population covariance
-                mean = np.mean(ps, axis=0)
-                cov = 2.0 * (np.dot(ps.T, ps) / n_particles - np.outer(mean, mean))
+                ps_transf = sim.param_transform(ps)
+                mean = np.mean(ps_transf, axis=0)
+                cov = 2.0 * (np.dot(ps_transf.T, ps_transf) / n_particles - np.outer(mean, mean))
                 std = np.linalg.cholesky(cov)
 
                 # perturb particles
                 new_ps = np.empty_like(ps)
                 new_logweights = np.empty_like(logweights)
 
-                for i in xrange(n_particles):
+                for i in range(n_particles):
 
                     dist = float('inf')
 
                     while dist > eps:
-                        idx = helper.discrete_sample(weights)[0]
-                        new_ps[i] = ps[idx] + np.dot(std, rng.randn(n_dim))
-                        _, _, _, idts, _ = sim_likelihood(*new_ps[i])
-                        stats = calc_summary_stats(idts)
-                        dist = calc_dist(stats, obs_stats)
+                        idx = lfpdf.discrete_sample(weights)[0]
+                        new_ps[i] = sim.param_invtransform(ps_transf[idx] + np.dot(std, np.random.randn(n_dim)))
+                        states = sim.forward_model(new_ps[i], n_samples=1)
+                        stats = sim.calc_summary_stats(states)
+                        dist = sim.calc_dist(stats, obs_stats)
                         nsims += 1
 
-                    logkernel = -0.5 * np.sum(np.linalg.solve(std, (new_ps[i] - ps).T) ** 2, axis=0)
-                    new_logweights[i] = -float('inf') if eval_prior(*new_ps[i]) < 0.5 else -scipy.misc.logsumexp(logweights + logkernel)
+                    new_ps_transf_i = sim.param_transform(new_ps[i])
+                    logkernel = -0.5 * np.sum(np.linalg.solve(std, (new_ps_transf_i - ps_transf).T) ** 2, axis=0)
+                    new_logweights[i] = -float('inf') if np.any(new_ps_transf_i > sim.prior_max) or np.any(new_ps_transf_i < sim.prior_min) else -scipy.misc.logsumexp(logweights + logkernel)
 
                 ps = new_ps
                 logweights = new_logweights - scipy.misc.logsumexp(new_logweights)
@@ -265,15 +265,15 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
 
                 # calculate effective sample size
                 ess = 1.0 / (np.sum(weights ** 2) * n_particles)
-                print 'iteration = {0}, eps = {1:.2}, ess = {2:.2%}'.format(iter, eps, ess)
+                print('iteration = {0}, eps = {1:.2}, ess = {2:.2%}'.format(iter, float(eps), ess))
 
                 if ess < ess_min:
 
                     # resample particles
                     new_ps = np.empty_like(ps)
 
-                    for i in xrange(n_particles):
-                        idx = helper.discrete_sample(weights)[0]
+                    for i in range(n_particles):
+                        idx = lfpdf.discrete_sample(weights)[0]
                         new_ps[i] = ps[idx]
 
                     ps = new_ps
@@ -286,10 +286,9 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
                 all_nsims.append(nsims)
 
                 # save results
-                filename = datadir + 'smc_abc_results.pkl'
-                helper.save((all_ps, all_logweights, all_eps, all_nsims), filename)
+                io.save((all_ps, all_logweights, all_eps, all_nsims), dirs['dir_smc'] + prefix + '_smc_abc.pkl')
 
-            """
+
         else:
             raise ValueError('{} not implemented'.format(algo))
     except:
