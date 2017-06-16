@@ -22,7 +22,8 @@ from tqdm import tqdm
 @click.argument('model', type=str)
 @click.argument('prefix', type=str)
 @click.option('--algo', type=str, default='ess', show_default=True, help="Determines \
-which MCMC algorithm is run, so far only ess and smc(-abc) are implemented.")
+which MCMC algorithm is run: so far ess (for the model `glm`), smc(-abc) and mcmc(-abc) \
+are implemented.")
 @click.option('--debug', default=True, is_flag=True, show_default=True,
               help='If provided, will enter debugger on error and show more \
 info during runtime.')
@@ -40,6 +41,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
     dirs['dir_nets'] = 'results/'+model+'/nets/'
     dirs['dir_sampler'] = 'results/'+model+'/sampler/'
     dirs['dir_smc'] = 'results/'+model+'/smc/'
+    dirs['dir_mcmc'] = 'results/'+model+'/mcmc/'
     for k, v in dirs.items():
         if not os.path.exists(v):
             os.makedirs(v)
@@ -117,26 +119,27 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
             # save sampling results
             np.save(dirs['dir_sampler'] + '/' + prefix + '_ess.npy', BETA_sub_samp)
 
-        elif algo == 'rejection':
-            print('Rejection ABC for {}/{}'.format(model, prefix))
+        elif algo == 'mcmc':
+            print('MCMC-ABC for {}/{}'.format(model, prefix))
 
-            pass
-            """
-            # from epsilonfree code, needs to be adopted
+            # Adapted from epsilonfree code
             # https://raw.githubusercontent.com/gpapamak/epsilon_free_inference/8c237acdb2749f3a340919bf40014e0922821b86/demos/mg1_queue_demo/mg1_abc.py
 
-            #  Runs mcmc abc inference. Saves the results for display later.
-            tol=0.002, step=0.2, n_samples=50000
+            #  Runs MCMC-ABC inference. Saves the results for display later.
+            tol = .5
+            step = 0.2
+            n_samples = 10000
 
             n_sims = 0
-
-            # load observed stats and simulated stats from prior
-            _, obs_stats = helper.load(datadir + 'observed_data.pkl')
-            prior_ps, prior_stats, prior_dist = load_sims_from_prior(n_files=1)
-            n_dim = prior_ps.shape[1]
+            n_dim = len(gt)
 
             # initialize markov chain with a parameter whose distance is within tolerance
-            for ps, stats, dist in izip(prior_ps, prior_stats, prior_dist):
+            num_init_sims = 100000
+            for i in range(num_init_sims):
+                ps = sim.sim_prior(n_samples=1)[0]
+                states = sim.forward_model(ps, n_samples=1)
+                stats = sim.calc_summary_stats(states)
+                dist = sim.calc_dist(stats, obs_stats)
                 if dist < tol:
                     cur_ps = ps
                     cur_stats = stats
@@ -153,14 +156,16 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
 
             for i in range(n_samples):
 
-                prop_ps = cur_ps + step * rng.randn(n_dim)
-                _, _, _, idts, _ = sim_likelihood(*prop_ps)
-                prop_stats = calc_summary_stats(idts)
-                prop_dist = calc_dist(prop_stats, obs_stats)
+                cur_ps_transf = sim.param_transform(cur_ps)
+                prop_ps = sim.param_invtransform(cur_ps_transf + step * np.random.randn(n_dim))
+                states = sim.forward_model(prop_ps, n_samples=1)
+                prop_stats = sim.calc_summary_stats(states)
+                prop_dist = sim.calc_dist(prop_stats, obs_stats)
                 n_sims += 1
 
                 # acceptance / rejection step
-                if prop_dist < tol and eval_prior(*prop_ps) > 0.0:
+                prop_ps_transf = sim.param_transform(prop_ps)
+                if prop_dist < tol and np.all(prop_ps_transf <= sim.prior_max) and np.all(prop_ps_transf >= sim.prior_min):
                     cur_ps = prop_ps
                     cur_stats = prop_stats
                     cur_dist = prop_dist
@@ -170,20 +175,20 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
                 stats.append(cur_stats.copy())
                 dist.append(cur_dist)
 
-                print 'simulation {0}, distance = {1}, acc rate = {2:%}'.format(i, cur_dist, float(n_accepted) / (i+1))
+                print('simulation {0}, distance = {1}, acc rate = {2:%}'.format(i, cur_dist, float(n_accepted) / (i+1)))
 
             ps = np.array(ps)
             stats = np.array(stats)
             dist = np.array(dist)
             acc_rate = float(n_accepted) / n_samples
 
-            filename = datadir + 'mcmc_abc_results_tol_{0}_step_{1}.pkl'.format(tol, step)
-            helper.save((ps, stats, dist, acc_rate, n_sims), filename)
-            """
+            # save results
+            io.save((ps, stats, dist, acc_rate, n_sims), dirs['dir_mcmc'] + prefix + '_mcmc_abc.pkl')
+
         elif algo == 'smc':
             print('Sequential Monte Carlo for {}/{}'.format(model, prefix))
 
-            # from epsilonfree code
+            # Adapted from epsilonfree code
             # https://raw.githubusercontent.com/gpapamak/epsilon_free_inference/8c237acdb2749f3a340919bf40014e0922821b86/demos/mg1_queue_demo/mg1_abc.py
 
             # Runs Sequential Monte Carlo ABC and saves results
