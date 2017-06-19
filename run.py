@@ -49,7 +49,7 @@ class ListFloatParamType(click.ParamType):
             self.fail('%s is not a valid input' % value, param, ctx)
 
 @click.command()
-@click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog','sqrt']))
+@click.argument('model', type=click.Choice(['autapse','gauss', 'glm', 'hh', 'mog','sqrt','competosc']))
 @click.argument('prefix', type=str)
 @click.option('--accumulate-data', default=False, is_flag=True, show_default=True,
               help='If set, will accumulate the training data on each round by \
@@ -213,6 +213,8 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue,
             from lfmods.mog import MoGSimulator as Simulator
         elif model == 'sqrt':
             from lfmods.sqrt import SqrtSimulator as Simulator
+        elif model == 'competosc':
+            from lfmods.competosc import COSimulator as Simulator
         else:
             raise ValueError('could not import Simulator')
 
