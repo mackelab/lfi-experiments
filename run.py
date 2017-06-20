@@ -100,7 +100,7 @@ not None.')
               help='Numerical fix (for the orginal epsilonfree method).')
 @click.option('--no-browser', default=False, is_flag=True, show_default=True,
               help='If provided, will not open plots of nb.py in browser.')
-@click.option('--mcmc', type=click.Choice(['mcmc','smc', 'ess']),
+@click.option('--mcmc', type=click.Choice([False, 'mcmc','smc', 'ess']),
               default=False, show_default=True,
               help='If provided, will run specified mcmc algorithm after fit.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
