@@ -21,7 +21,7 @@ from tqdm import tqdm
 @click.command()
 @click.argument('model', type=str)
 @click.argument('prefix', type=str)
-@click.option('--algo', type=str, default='ess', show_default=True, help="Determines \
+@click.option('--algo', type=str, default='mcmc', show_default=True, help="Determines \
 which MCMC algorithm is run: so far ess (for the model `glm`), smc(-abc) and mcmc(-abc) \
 are implemented.")
 @click.option('--debug', default=True, is_flag=True, show_default=True,
