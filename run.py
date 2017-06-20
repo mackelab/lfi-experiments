@@ -100,8 +100,9 @@ not None.')
               help='Numerical fix (for the orginal epsilonfree method).')
 @click.option('--no-browser', default=False, is_flag=True, show_default=True,
               help='If provided, will not open plots of nb.py in browser.')
-@click.option('--mcmc', default=False, is_flag=True, show_default=True,
-              help='If provided, will run mcmc after fit.')
+@click.option('--mcmc', type=click.Choice(['mcmc','smc', 'ess']),
+              default=False, show_default=True,
+              help='If provided, will run specified mcmc algorithm after fit.')
 @click.option('--pdb-iter', type=int, default=None, show_default=True,
               help='Number of iterations after which to debug.')
 @click.option('--prior-alpha', type=float, default=0.0, show_default=True,
@@ -364,7 +365,7 @@ def run(model, prefix, accumulate_data, bad_data, early_stopping, enqueue,
 
         if mcmc:
             print('Run MCMC')
-            subprocess.call([sys.executable, 'run_mcmc.py', model, prefix])
+            subprocess.call([sys.executable, 'run_mcmc.py', model, prefix] + ['--algo'] + list(mcmc))
 
     except:
         t, v, tb = sys.exc_info()
