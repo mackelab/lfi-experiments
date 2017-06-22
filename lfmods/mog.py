@@ -135,4 +135,4 @@ class MoGSimulator(SimulatorBase):
         mog = pdf.MoG(self.alphas, ms=ms, Ss=Ss, seed=self.gen_newseed())
         samples = mog.gen(n_samples=n_samples)
 
-        return np.abs(samples)
+        return samples
