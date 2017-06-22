@@ -56,6 +56,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
         y_obs = sim.obs_trace.reshape(-1,1)
         posterior = io.last(posteriors)
         gt = sim.true_params
+        n_params = sim.n_params
         t = sim.t
         I = sim.I_obs.reshape(1,-1)
 
@@ -126,7 +127,7 @@ def run(model, prefix, algo, debug, seed_np, seed_sampler):
             # https://raw.githubusercontent.com/gpapamak/epsilon_free_inference/8c237acdb2749f3a340919bf40014e0922821b86/demos/mg1_queue_demo/mg1_abc.py
 
             #  Runs MCMC-ABC inference. Saves the results for display later.
-            tol = .5
+            tol = .1*n_params
             step = 0.2
             n_samples = 10000
 
