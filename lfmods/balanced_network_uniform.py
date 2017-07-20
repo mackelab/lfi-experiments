@@ -124,6 +124,7 @@ save_data(data=round_dict, filename='{}r{}t{}ree{}'.format(time.time(), n_rounds
           folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/')
 
 # #
-# plt.figure(figsize=(15, 5))
-# brian_plot(sme, markersize=1.)
-# plt.show()
+plt.figure(figsize=(15, 5))
+brian_plot(sme, markersize=1.)
+plt.savefig('spiketrain_uniform.pdf')
+plt.show()

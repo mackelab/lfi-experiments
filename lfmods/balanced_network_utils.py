@@ -102,6 +102,20 @@ def calculate_correlation_matrix(spikecount_matrix_windows):
     return reduced_rho
 
 
+def calculate_fano_factor(spike_counts):
+    """
+    Calculates ff over trials and time windows. Assumes the spike_counts matrix to have shape
+    n_trials x n_neurons x n_time_windows
+    """
+    count_variance = np.var(spike_counts, axis=(0, 2))
+    count_mean = np.mean(spike_counts, axis=(0, 2))
+
+    # we have to exclude silent neurons
+    spiking_mask = np.logical_not(count_mean == 0)
+    ff = count_variance[spiking_mask] / count_mean[spiking_mask]
+    return ff
+
+
 def save_data(data, filename, folder):
     full_path_to_file = os.path.join(folder, filename + '.p')
     with open(full_path_to_file, 'wb') as outfile:
