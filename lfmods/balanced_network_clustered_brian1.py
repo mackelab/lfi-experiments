@@ -2,8 +2,10 @@ from brian import *
 from lfmods.balanced_network_utils import *
 import time
 
-n_rounds = 1
-n_trials = 3
+n_realizations = 1
+n_trials = 1
+
+np.random.seed(11)
 
 # create simulation network
 net = Network()
@@ -11,26 +13,27 @@ NE = 4000
 NI = 1000
 N = NE + NI
 
-simulation_time = 3 * second
+simulation_time = 10 * second
 vt = 1
 vr = 0
 
 # cluster parameters
 n_cluster = 50
 # cluster coef
-ree = 1.0
+ree = 2.5
 # average ee sparseness
 p_ee = 0.2
 cluster_weight_factor = 1.9
 p_in, p_out = get_cluster_connection_probs(ree, n_cluster, p_ee)
 Nc = int(NE / n_cluster)
 
-tau_e = 15*ms
-tau_i = 10*ms
+tau_e = 15 * ms
+tau_i = 10 * ms
 tau1 = 1 * ms
-tau2_e = 4 * ms
+tau2_e = 3 * ms
 tau2_i = 2 * ms
 tau_scale = 1 * ms
+tau_refrac = 5 * ms
 
 # weights
 wee = 0.024
@@ -54,32 +57,33 @@ tau : second
 '''
 
 print('Setting up...')
-params = dict(n_rounds=n_rounds, n_trials=n_trials, NE=NE, NI=NI, simulation_time=simulation_time)
-
-P = NeuronGroup(N, eqs, threshold='v>vt', reset='v=vr', refractory=5 * ms)
-net.add(P)
-
-Pe = P[:NE]
-Pi = P[NE:]
-
-Pe.tau = tau_e
-Pi.tau = tau_i
-
-example_neuron = int(NE / 2)
-
-Mv = StateMonitor(P, 'v', record=example_neuron)
-MIe = StateMonitor(P, 'I_e', record=example_neuron)
-MIi = StateMonitor(P, 'I_i', record=example_neuron)
-
-sme = SpikeMonitor(Pe)
-smi = SpikeMonitor(Pi)
-monitors = [Mv, MIe, MIi, sme, smi]
-net.add(monitors)
+params = dict(n_rounds=n_realizations, n_trials=n_trials, NE=NE, NI=NI, simulation_time=simulation_time)
 
 # build a dict to be save to disc: holds each trial in a sub dict. each sub dict holds the spike times
 round_dict = dict(params=params)
 
-for r in range(n_rounds):
+# define monitor place holder for plotting
+sme = None
+
+for realization in range(n_realizations):
+
+    # clear workspace to make sure that is a new realization of the network
+    net.reinit()
+
+    P = NeuronGroup(N, eqs, threshold='v>vt', reset='v=vr', refractory=tau_refrac, method='Euler')
+    net.add(P)
+
+    Pe = P[:NE]
+    Pi = P[NE:]
+
+    Pe.tau = tau_e
+    Pi.tau = tau_i
+
+    # set the resting potentials
+    Pe.mu = np.random.uniform(1.1, 1.2, NE) * (vt - vr) + vr
+    Pi.mu = np.random.uniform(1.0, 1.05, NI) * (vt - vr) + vr
+
+    example_neuron = int(NE / 2)
 
     print('building connections...')
     # create clusters
@@ -99,13 +103,14 @@ for r in range(n_rounds):
         connection_objects.append(Cee)  # uniform only
         print('uniform connectivity is used...')
     else:
+        print('connecting the clusters...')
         CeeIn = [None] * n_cluster
         CeeOut = [None] * n_cluster * (n_cluster - 1)
         for i in range(n_cluster):
             for j in range(n_cluster):
                 # cluster-internal excitatory connections (cluster only)
                 if i == j:
-                    CeeIn[i] = Connection(PeCluster[i], PeCluster[i], 'x_e', sparseness=p_in,
+                    CeeIn[i] = Connection(PeCluster[i], PeCluster[j], 'x_e', sparseness=p_in,
                                           weight=wee * cluster_weight_factor)
                     connection_objects.append(CeeIn[i])
 
@@ -115,20 +120,23 @@ for r in range(n_rounds):
 
     net.add(connection_objects)
 
+    Mv = StateMonitor(P, 'v', record=example_neuron)
+    MIe = StateMonitor(P, 'I_e', record=example_neuron)
+    MIi = StateMonitor(P, 'I_i', record=example_neuron)
+
+    sme = SpikeMonitor(Pe)
+    smi = SpikeMonitor(Pi)
+
+    net.add([Mv, MIe, MIi, sme, smi])
+
     for trial in range(n_trials):
         tic = time.time()
 
-        # reset state variables
-        net.reinit()
-
-        # set the random initial conditions
-        Pe.mu = np.random.uniform(1.1, 1.2, NE) * (vt - vr) + vr
-        Pi.mu = np.random.uniform(1.0, 1.05, NI) * (vt - vr) + vr
-
+        # set random initial conditions
         Pe.v = np.random.rand(NE) * (vt - vr) + vr
         Pi.v = np.random.rand(NI) * (vt - vr) + vr
 
-        print('Running ... trial {} / {} in round {} / {}'.format(trial + 1, n_trials, r + 1, n_rounds))
+        print('Running ... trial {} / {} in realization {} / {}'.format(trial + 1, n_trials, realization + 1, n_realizations))
         net.run(simulation_time, report='text')
         print('Done...')
 
@@ -145,11 +153,13 @@ for r in range(n_rounds):
     net.remove(connection_objects)
 
 # save results to disk
-save_data(data=round_dict, filename='{}r{}t{}ree{}'.format(time.time(), n_rounds, n_trials, 1),
+save_data(data=round_dict, filename='{}r{}t{}ree{}_dur{}_brain1'.format(time.time(), n_realizations, n_trials, ree,
+                                                                 simulation_time),
           folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/')
 
 # #
 plt.figure(figsize=(15, 5))
-sme.plot()
-plt.savefig('spiketrain_uniform.pdf')
+raster_plot(sme, markersize=1.0)
+plt.title('Spike trains of E neurons')
+save_figure(filename='spiketrain_{}_b1.pdf'.format(ree))
 plt.show()
