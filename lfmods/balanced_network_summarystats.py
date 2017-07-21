@@ -1,6 +1,6 @@
 from lfmods.balanced_network_utils import *
 
-filename = '1500558782.44r1t3ree1.p'
+filename = '1500644715.81r1t1ree2.5_dur10_brian1.p'
 folder = '/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/'
 
 round_dict = load_data(filename, folder)
@@ -8,16 +8,17 @@ round_dict = load_data(filename, folder)
 params = round_dict['params']
 n_rounds = params['n_rounds']
 n_trials = params['n_trials']
+simulation_time = np.asarray(params['simulation_time'])  # remove unit
 NE = params['NE']
 NI = params['NI']
 
-t = 1.5  # in sec
-delta_t = 1.5  # in sec
+time_offset = 1.  # in sec
+delta_t = simulation_time - time_offset  # in sec
 recordings_length = delta_t
 
 # define time windows for spike counts
 # in 50 ms time window
-window_length = 0.05  # in s
+window_length = 0.1  # in s
 # ignore overlap for now
 n_time_windows = int(recordings_length / window_length)
 
@@ -38,27 +39,26 @@ for r in range(n_rounds):
 
         # get spike counts in matrix
         spike_count_mat_E[r, trial, :] = get_spikecounts_for_time_window(trial_dict['spikes_E'],
-                                                                         t, delta_t) # for E neurons
+                                                                         time_offset, delta_t) # for E neurons
         spike_count_mat_I[r, trial, :] = get_spikecounts_for_time_window(trial_dict['spikes_I'],
-                                                                         t, delta_t) # for I neurons
+                                                                         time_offset, delta_t) # for I neurons
 
         # get spike counts for sliding time windows
-        spike_count_window_mat_E[r, trial, :, :] = calculate_spike_counts_over_windows(trial_dict['spikes_E'], t,
+        spike_count_window_mat_E[r, trial, :, :] = calculate_spike_counts_over_windows(trial_dict['spikes_E'], time_offset,
                                                                                        delta_t, window_length)
-
 
     # calculate correlations
     correlations_E.append(calculate_correlation_matrix(spike_count_window_mat_E[r, ...]))
     fano_factors_E.append(calculate_fano_factor(spike_count_window_mat_E[r, ...]))
 
 # rate histogram
-rates = np.mean(spike_count_mat_E, axis=1).squeeze() / delta_t  # mean over trials
+rates = spike_count_mat_E.flatten() / delta_t  # mean over trials? no --> axis=0
 plt.figure(figsize=(10, 5))
 plt.hist(rates, bins=40, range=[0, 15], alpha=.7)
 plt.title('Firing rates in spikes / sec')
 plt.axvline(np.mean(rates), linestyle='--', label='mean={}'.format(np.round(np.mean(rates), 2)), color='C1')
 plt.legend()
-plt.savefig('rate_hist_' + filename + 'df')
+save_figure(filename=filename[:-2] + '_rate_hist.pdf')
 
 # correlation histogram
 rho = correlations_E[0]
@@ -66,14 +66,14 @@ plt.figure(figsize=(10, 5))
 plt.hist(rho, bins=40, range=[-.5, .5], alpha=.7)
 plt.axvline(np.mean(rho), linestyle='--', label='mean={}'.format(np.round(np.mean(rho), 2)), color='C1')
 plt.legend()
-plt.savefig('rho_hist_' + filename + 'df')
+save_figure(filename=filename[:-2] + '_rho_hist.pdf')
 
 # fano factor histogram
 ff = fano_factors_E[0]
 plt.figure(figsize=(10, 5))
-plt.hist(ff, bins=40, range=[0, 3], alpha=.7)
+plt.hist(ff, bins=40, range=[0, 3.5], alpha=.7)
 plt.title('Fano factors over trials and {}s windows'.format(window_length))
 plt.axvline(np.mean(ff), linestyle='--', label='mean={}'.format(np.round(np.mean(ff), 2)), color='C1')
 plt.legend()
-plt.savefig('ff_hist_' + filename + 'df')
+save_figure(filename=filename[:-2] + '_ff_hist.pdf')
 plt.show()
