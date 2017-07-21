@@ -107,8 +107,8 @@ def calculate_fano_factor(spike_counts):
     Calculates ff over trials and time windows. Assumes the spike_counts matrix to have shape
     n_trials x n_neurons x n_time_windows
     """
-    count_variance = np.var(spike_counts, axis=(0, 2))
-    count_mean = np.mean(spike_counts, axis=(0, 2))
+    count_variance = np.var(spike_counts, axis=(2)).flatten()  # over trials or windows or both?
+    count_mean = np.mean(spike_counts, axis=(2)).flatten()
 
     # we have to exclude silent neurons
     spiking_mask = np.logical_not(count_mean == 0)
@@ -125,3 +125,7 @@ def save_data(data, filename, folder):
 def load_data(filename, folder):
     full_path = os.path.join(folder, filename)
     return pickle.load(open(full_path, 'rb'))
+
+
+def save_figure(filename, folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/figures/'):
+    plt.savefig(os.path.join(folder, filename))
