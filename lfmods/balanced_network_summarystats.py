@@ -1,6 +1,6 @@
 from lfmods.balanced_network_utils import *
 
-filename = '1500644715.81r1t1ree2.5_dur10_brian1.p'
+filename = '150089557655ree25_dur100_brain1.p'
 folder = '/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/'
 
 round_dict = load_data(filename, folder)

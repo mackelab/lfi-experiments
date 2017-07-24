@@ -87,6 +87,7 @@ for realization in range(n_realizations):
     example_neuron = int(NE / 2)
 
     print('building connections...')
+    tic = time.time()
     # create clusters
     PeCluster = [Pe[i * Nc:(i + 1) * Nc] for i in range(n_clusters)]
 
@@ -103,7 +104,6 @@ for realization in range(n_realizations):
 
     if ree == 1.:
         Cee = Connection(Pe, Pe, 'x_e', sparseness=p_ee, weight=wee)  # uniform only
-        connection_objects.append(Cee)  # uniform only
         print('uniform connectivity is used...')
     else:
         print('connecting the clusters...')
@@ -117,8 +117,21 @@ for realization in range(n_realizations):
                 else:
                     Cee.connect_random(PeCluster[i], PeCluster[j], p=p_out, weight=wee)
 
+        # kf = KFold(n_splits=n_clusters)
+        # for other_idx, cluster_idx in kf.split(range(n_clusters)):
+        #
+        #     Pin = Pe[cluster_idx[0]:cluster_idx[-1]]
+        #     Pout = Pe[other_idx[0]:other_idx[-1]]
+        #
+        #     # within cluster
+        #     Cee.connect_random(Pin, Pin, p=p_in, weight=wee * cluster_weight_factor)
+        #
+        #     # out of cluster
+        #     Cee.connect_random(Pin, Pout, p=p_out, weight=wee)
+
     net.add(Cee)
-    net.add(connection_objects)
+    toc = time.time() - tic
+    print('time elapsed for connections in min: ', toc / 60.)
 
     Mv = StateMonitor(P, 'v', record=example_neuron)
     MIe = StateMonitor(P, 'I_e', record=example_neuron)
@@ -148,9 +161,6 @@ for realization in range(n_realizations):
         trial_dict['spikes_E'] = sme.getspiketimes()
         trial_dict['spikes_I'] = smi.getspiketimes()
         round_dict['trial{}'.format(trial)] = trial_dict
-
-    # remove the connections so that they can be formed again for a new round
-    net.remove(connection_objects)
 
 time_str = time.time()
 data_filename = '{}ree{}_dur{}_brain1'.format(time_str, ree, simulation_time).replace('.', '')
