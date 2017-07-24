@@ -1,6 +1,7 @@
 from brian import *
 from lfmods.balanced_network_utils import *
 import time
+from sklearn.model_selection import KFold
 
 n_realizations = 1
 n_trials = 1
@@ -18,14 +19,14 @@ vt = 1
 vr = 0
 
 # cluster parameters
-n_cluster = 50
+n_clusters = 50
 # cluster coef
 ree = 2.5
 # average ee sparseness
 p_ee = 0.2
 cluster_weight_factor = 1.9
-p_in, p_out = get_cluster_connection_probs(ree, n_cluster, p_ee)
-Nc = int(NE / n_cluster)
+p_in, p_out = get_cluster_connection_probs(ree, n_clusters, p_ee)
+Nc = int(NE / n_clusters)
 
 tau_e = 15 * ms
 tau_i = 10 * ms
@@ -87,16 +88,18 @@ for realization in range(n_realizations):
 
     print('building connections...')
     # create clusters
-    PeCluster = [Pe[i * Nc:(i + 1) * Nc] for i in range(n_cluster)]
-    connection_objects = []
+    PeCluster = [Pe[i * Nc:(i + 1) * Nc] for i in range(n_clusters)]
 
     # establish connections
     Cii = Connection(Pi, Pi, 'x_i', sparseness=p_ii, weight=wii)
     Cei = Connection(Pi, Pe, 'x_i', sparseness=p_ei, weight=wei)
     Cie = Connection(Pe, Pi, 'x_e', sparseness=p_ie, weight=wie)
-    connection_objects.append(Cii)
-    connection_objects.append(Cei)
-    connection_objects.append(Cie)
+    net.add(Cii)
+    net.add(Cei)
+    net.add(Cie)
+
+    # prelocate the connection object, specify connection weights later
+    Cee = Connection(Pe, Pe, state='x_e')
 
     if ree == 1.:
         Cee = Connection(Pe, Pe, 'x_e', sparseness=p_ee, weight=wee)  # uniform only
@@ -104,20 +107,17 @@ for realization in range(n_realizations):
         print('uniform connectivity is used...')
     else:
         print('connecting the clusters...')
-        CeeIn = [None] * n_cluster
-        CeeOut = [None] * n_cluster * (n_cluster - 1)
-        for i in range(n_cluster):
-            for j in range(n_cluster):
-                # cluster-internal excitatory connections (cluster only)
+        for i in range(n_clusters):
+            for j in range(n_clusters):
+                # cluster-internal excitatory connections
                 if i == j:
-                    CeeIn[i] = Connection(PeCluster[i], PeCluster[j], 'x_e', sparseness=p_in,
-                                          weight=wee * cluster_weight_factor)
-                    connection_objects.append(CeeIn[i])
+                    Cee.connect_random(PeCluster[i], PeCluster[j], p=p_in, weight=wee * cluster_weight_factor)
 
-                # cluster-external excitatory connections (cluster only)
+                # cluster-external excitatory connections
                 else:
-                    connection_objects.append(Connection(PeCluster[i], PeCluster[j], 'x_e', sparseness=p_out, weight=wee))
+                    Cee.connect_random(PeCluster[i], PeCluster[j], p=p_out, weight=wee)
 
+    net.add(Cee)
     net.add(connection_objects)
 
     Mv = StateMonitor(P, 'v', record=example_neuron)
@@ -152,14 +152,16 @@ for realization in range(n_realizations):
     # remove the connections so that they can be formed again for a new round
     net.remove(connection_objects)
 
+time_str = time.time()
+data_filename = '{}ree{}_dur{}_brain1'.format(time_str, ree, simulation_time).replace('.', '')
+
 # save results to disk
-save_data(data=round_dict, filename='{}r{}t{}ree{}_dur{}_brain1'.format(time.time(), n_realizations, n_trials, ree,
-                                                                 simulation_time),
+save_data(data=round_dict, filename=data_filename,
           folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/')
 
 # #
 plt.figure(figsize=(15, 5))
 raster_plot(sme, markersize=1.0)
 plt.title('Spike trains of E neurons')
-save_figure(filename='spiketrain_{}_b1.pdf'.format(ree))
-plt.show()
+spiketrain_filename = '{}_spiketrain_ree{}_b1'.format(time_str, ree).replace('.', '') + '.pdf'
+save_figure(filename=spiketrain_filename)
