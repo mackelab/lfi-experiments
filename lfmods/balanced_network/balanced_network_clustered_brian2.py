@@ -1,9 +1,10 @@
-from brian2 import *
-from lfmods.balanced_network_utils import *
-from brian2tools import *
 import time
+
+from brian2 import *
+from brian2tools import *
 from sklearn.model_selection import KFold
 
+from balanced_network.balanced_network_utils import *
 
 n_realizations = 1
 n_trials = 1

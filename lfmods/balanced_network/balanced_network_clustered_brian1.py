@@ -1,7 +1,8 @@
-from brian import *
-from lfmods.balanced_network_utils import *
 import time
-from sklearn.model_selection import KFold
+
+from brian import *
+
+from balanced_network.balanced_network_utils import *
 
 n_realizations = 1
 n_trials = 1
@@ -14,7 +15,7 @@ NE = 4000
 NI = 1000
 N = NE + NI
 
-simulation_time = 4 * second
+simulation_time = 1 * second
 vt = 1
 vr = 0
 

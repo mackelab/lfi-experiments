@@ -1,4 +1,4 @@
-from lfmods.balanced_network_utils import *
+from balanced_network.balanced_network_utils import *
 
 # uniform
 # filenames = [ '150099912516ree10_dur40_brain1.p', '150099912572ree10_dur30_brain1.p', '15009991276ree10_dur20_brain1.p']
