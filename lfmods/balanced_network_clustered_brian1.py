@@ -14,7 +14,7 @@ NE = 4000
 NI = 1000
 N = NE + NI
 
-simulation_time = 10 * second
+simulation_time = 4 * second
 vt = 1
 vr = 0
 
@@ -58,7 +58,8 @@ tau : second
 '''
 
 print('Setting up...')
-params = dict(n_rounds=n_realizations, n_trials=n_trials, NE=NE, NI=NI, simulation_time=simulation_time)
+params = dict(n_rounds=n_realizations, n_trials=n_trials, NE=NE, NI=NI, simulation_time=simulation_time,
+              n_clusters=n_clusters)
 
 # build a dict to be save to disc: holds each trial in a sub dict. each sub dict holds the spike times
 round_dict = dict(params=params)

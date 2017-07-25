@@ -51,14 +51,14 @@ def get_spiketimes_for_time_window(spiketime_dict, t, delta_t):
     return {k: select_spiketimes(v, t, delta_t) for k, v in spiketime_dict.items()}
 
 
-def get_spikecounts_for_time_window(spiketime_dict, t, delta_t):
+def get_spikecounts_fixed_time_window(spiketime_dict, t, delta_t):
     # get spike times for
     spiketime_dict_window = get_spiketimes_for_time_window(spiketime_dict, t, delta_t)
     spikecounts = [spiketime_array.size for spiketime_array in spiketime_dict_window.values()]
     return np.array(spikecounts)
 
 
-def calculate_spike_counts_over_windows(spiketime_dict, t, delta_t, window_length):
+def get_spike_counts_over_time_windows(spiketime_dict, t, delta_t, window_length):
     n_neurons = len(spiketime_dict.keys())
     length_of_recording = delta_t
     n_time_windows = int(length_of_recording / window_length)
@@ -66,13 +66,18 @@ def calculate_spike_counts_over_windows(spiketime_dict, t, delta_t, window_lengt
 
     for window_idx in range(n_time_windows):
         wt = t + window_idx * window_length
-        spike_counts_windows[:, window_idx] = get_spikecounts_for_time_window(spiketime_dict,
-                                                                              t=wt,
-                                                                              delta_t=window_length)
+        spike_counts_windows[:, window_idx] = get_spikecounts_fixed_time_window(spiketime_dict,
+                                                                                t=wt,
+                                                                                delta_t=window_length)
     return spike_counts_windows
 
 
 def calculate_correlation_matrix(spikecount_matrix_windows):
+
+    # if there is only a single trial, expand the first dimension
+    if spikecount_matrix_windows.ndim == 2:
+        spikecount_matrix_windows = spikecount_matrix_windows[np.newaxis, ...]
+
     n_trials, n_neurons, n_time_windows = spikecount_matrix_windows.shape
 
     # prelocate the cov matrix
@@ -102,13 +107,25 @@ def calculate_correlation_matrix(spikecount_matrix_windows):
     return reduced_rho
 
 
+def calculate_clusterpair_correlations(spikecount_matrix_windows, n_clusters, n_neurons_per_cluster):
+    # for every cluster, get the rho list and append
+    super_rho = []
+    idx = np.arange(0, n_neurons_per_cluster)
+    for k in range(n_clusters):
+        neuron_idx = idx + k * n_neurons_per_cluster
+        tmp_rho = calculate_correlation_matrix(spikecount_matrix_windows[neuron_idx, :])
+        super_rho = np.concatenate((super_rho, tmp_rho))
+
+    return np.array(super_rho)
+
+
 def calculate_fano_factor(spike_counts):
     """
     Calculates ff over trials and time windows. Assumes the spike_counts matrix to have shape
     n_trials x n_neurons x n_time_windows
     """
-    count_variance = np.var(spike_counts, axis=(2)).flatten()  # over trials or windows or both?
-    count_mean = np.mean(spike_counts, axis=(2)).flatten()
+    count_variance = np.var(spike_counts, axis=-1).flatten()  # over trials or windows or both?
+    count_mean = np.mean(spike_counts, axis=-1).flatten()
 
     # we have to exclude silent neurons
     spiking_mask = np.logical_not(count_mean == 0)
