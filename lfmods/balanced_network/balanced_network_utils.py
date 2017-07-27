@@ -4,6 +4,10 @@ import pickle
 import matplotlib.pyplot as plt
 
 
+def get_scaling_factor_for_weights(ne, ni, n_original=5000.):
+    return 1 / np.sqrt(n_original / (ne + ni))
+
+
 def get_cluster_connection_probs(REE, k, p_ee):
     """
     When using clustered connectivity in the E population the avergae sparseness should still be p_ee.

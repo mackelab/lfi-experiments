@@ -3,7 +3,7 @@ from balanced_network.balanced_network_utils import *
 # uniform
 # filenames = [ '150099912516ree10_dur40_brain1.p', '150099912572ree10_dur30_brain1.p', '15009991276ree10_dur20_brain1.p']
 # clustered
-filenames = [ '150099931884ree25_dur20_brain1.p', '150099932649ree25_dur30_brain1.p', '150099933465ree25_dur40_brain1.p']
+filenames = ['150117497016ree32_dur50_brain1.p']
 
 for filename in filenames:
     folder = '/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/'
@@ -59,7 +59,7 @@ for filename in filenames:
     # rate histogram
     rates = spike_count_mat_E.flatten() / delta_t  # mean over trials? no --> axis=0
     plt.figure(figsize=(10, 5))
-    plt.hist(rates, bins=40, range=[0, 15], alpha=.7)
+    plt.hist(rates, bins=40, range=[0, 100], alpha=.7)
     plt.title('Firing rates in spikes / sec')
     plt.axvline(np.mean(rates), linestyle='--', label='mean={}'.format(np.round(np.mean(rates), 2)), color='C1')
     plt.legend()
@@ -68,7 +68,7 @@ for filename in filenames:
     # correlation histogram
     rho = correlations_E[0]
     plt.figure(figsize=(10, 5))
-    plt.hist(rho, bins=40, range=[-.5, .5], alpha=.7)
+    plt.hist(rho, bins=40, range=[-1, 1], alpha=.7)
     plt.axvline(np.mean(rho), linestyle='--', label='mean={}'.format(np.round(np.mean(rho), 2)), color='C1')
     plt.legend()
     save_figure(filename=filename[:-2] + '_rho_hist.pdf')
@@ -76,9 +76,9 @@ for filename in filenames:
     # fano factor histogram
     ff = fano_factors_E[0]
     plt.figure(figsize=(10, 5))
-    plt.hist(ff, bins=40, range=[0, 3.5], alpha=.7)
+    plt.hist(ff, bins=40, range=[0, 6], alpha=.7)
     plt.title('Fano factors over trials and {}s windows'.format(window_length))
     plt.axvline(np.mean(ff), linestyle='--', label='mean={}'.format(np.round(np.mean(ff), 2)), color='C1')
     plt.legend()
     save_figure(filename=filename[:-2] + '_ff_hist.pdf')
-    # plt.show()
+    plt.show()

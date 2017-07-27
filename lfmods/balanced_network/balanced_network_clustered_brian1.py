@@ -11,23 +11,27 @@ np.random.seed(11)
 
 # create simulation network
 net = Network()
-NE = 4000
-NI = 1000
+n = 500
+NE = 4 * n
+NI = 1 * n
 N = NE + NI
 
-simulation_time = 1 * second
+# get the scaling factor for weights in case the network size is different
+alpha = get_scaling_factor_for_weights(NE, NI)
+
+simulation_time = 10 * second
 vt = 1
 vr = 0
 
 # cluster parameters
-n_clusters = 50
+C = 80
+n_clusters = int(NE / C)
 # cluster coef
-ree = 2.5
+ree = 3.3
 # average ee sparseness
 p_ee = 0.2
 cluster_weight_factor = 1.9
 p_in, p_out = get_cluster_connection_probs(ree, n_clusters, p_ee)
-Nc = int(NE / n_clusters)
 
 tau_e = 15 * ms
 tau_i = 10 * ms
@@ -38,10 +42,10 @@ tau_scale = 1 * ms
 tau_refrac = 5 * ms
 
 # weights
-wee = 0.024
-wei = 0.045
-wie = 0.014
-wii = 0.057
+wee = 0.024 * alpha
+wei = 0.045 * alpha
+wie = 0.014 * alpha
+wii = 0.057 * alpha
 
 # sparseness
 p_ie = 0.5
@@ -91,7 +95,7 @@ for realization in range(n_realizations):
     print('building connections...')
     tic = time.time()
     # create clusters
-    PeCluster = [Pe[i * Nc:(i + 1) * Nc] for i in range(n_clusters)]
+    PeCluster = [Pe[i * C:(i + 1) * C] for i in range(n_clusters)]
 
     # establish connections
     Cii = Connection(Pi, Pi, 'x_i', sparseness=p_ii, weight=wii)
@@ -133,7 +137,7 @@ for realization in range(n_realizations):
 
     net.add(Cee)
     toc = time.time() - tic
-    print('time elapsed for connections in min: ', toc / 60.)
+    print('time elapsed for connections in sec: ', np.round(toc, 2))
 
     Mv = StateMonitor(P, 'v', record=example_neuron)
     MIe = StateMonitor(P, 'I_e', record=example_neuron)
@@ -156,7 +160,7 @@ for realization in range(n_realizations):
         print('Done...')
 
         toc = time.time() - tic
-        print('time elapsed this trial in min: ', toc / 60.)
+        print('time elapsed this trial in sec: ', np.round(toc, 2))
 
         # save the result of the current trial
         trial_dict = dict()
@@ -173,7 +177,9 @@ save_data(data=round_dict, filename=data_filename,
 
 # #
 plt.figure(figsize=(15, 5))
-raster_plot(sme, markersize=1.0)
+raster_plot(sme, markersize=2)
+raster_plot(smi, markersize=2)
 plt.title('Spike trains of E neurons')
-spiketrain_filename = '{}_spiketrain_ree{}_b1'.format(time_str, ree).replace('.', '') + '.pdf'
+spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.pdf'
 save_figure(filename=spiketrain_filename)
+plt.show()
