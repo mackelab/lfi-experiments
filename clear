@@ -1,4 +1,0 @@
-#!/bin/bash
-
-rm -r results/gauss/nets/benchmark/*
-rm -r results/mog/nets/benchmark/*
