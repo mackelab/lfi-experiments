@@ -10,7 +10,7 @@ This repository contains per-experiment subfolders. Common files are in the root
 This repository relies on the packages `delfi` and `lfimodels`:
 - `delfi` contains code for density-estimation likelihood-free inference and
   toy statistical models
-- `lfimodels` contains neuroscience-related simulator models (for now) and summary statistics that can be used with `delfi`
+- `lfimodels` contains neuroscience-related models and summary statistics that can be used with `delfi`
 
 
 ## Note
