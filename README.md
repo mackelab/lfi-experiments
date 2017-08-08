@@ -1,4 +1,4 @@
-# likelihood-free inference experiments
+# Experiments with likelihood-free inference
 
 Applications of likelihood-free inference to different problems. 
 
