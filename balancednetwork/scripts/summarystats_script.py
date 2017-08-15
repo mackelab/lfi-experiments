@@ -1,16 +1,19 @@
-from balancednetwork.utils import *
+from utils import *
 
 # uniform
-# filenames = [ '150099912516ree10_dur40_brain1.p', '150099912572ree10_dur30_brain1.p', '15009991276ree10_dur20_brain1.p']
+filenames = [ 'data_ree1.9.p', 'data_ree2.5.p', 'data_ree3.1.p']
 # clustered
-filenames = ['150117497016ree32_dur50_brain1.p']
+# filenames = ['150117497016ree32_dur50_brain1.p']
 
 for filename in filenames:
     folder = '/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/'
 
-    round_dict = load_data(filename, folder)
+    full_path = os.path.join(folder, filename)
 
-    params = round_dict['params']
+    round_dict = pickle.load(open(full_path, 'rb'), encoding='latin1')
+
+    # params = round_dict['params']
+    params = dict(n_rounds=1, n_trials=1, simulation_time=2., NE=4000, NI=1000)
     n_rounds = params['n_rounds']
     n_trials = params['n_trials']
     simulation_time = np.asarray(params['simulation_time'])  # remove unit
@@ -40,13 +43,13 @@ for filename in filenames:
     for r in range(n_rounds):
 
         for trial in range(n_trials):
-            trial_dict = round_dict['trial{}'.format(trial)]
+            trial_dict = round_dict
 
             # get spike counts in matrix
             spike_count_mat_E[r, trial, :] = get_spikecounts_fixed_time_window(trial_dict['spikes_E'],
                                                                                time_offset, delta_t) # for E neurons
-            spike_count_mat_I[r, trial, :] = get_spikecounts_fixed_time_window(trial_dict['spikes_I'],
-                                                                               time_offset, delta_t) # for I neurons
+            # spike_count_mat_I[r, trial, :] = get_spikecounts_fixed_time_window(trial_dict['spikes_I'],
+            #                                                                    time_offset, delta_t) # for I neurons
 
             # get spike counts for sliding time windows
             spike_count_window_mat_E[r, trial, :, :] = get_spike_counts_over_time_windows(trial_dict['spikes_E'], time_offset,

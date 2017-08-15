@@ -2,7 +2,7 @@ import time
 
 from brian import *
 
-from balanced_network.balanced_network_utils import *
+from balancednetwork.utils import *
 
 n_realizations = 1
 n_trials = 1
