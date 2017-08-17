@@ -1,7 +1,7 @@
+import sys
 import time
 
 from brian import *
-
 from balancednetwork.utils import *
 
 n_realizations = 1
@@ -11,7 +11,7 @@ np.random.seed(11)
 
 # create simulation network
 net = Network()
-n = 500
+n = 1000
 NE = 4 * n
 NI = 1 * n
 N = NE + NI
@@ -19,7 +19,7 @@ N = NE + NI
 # get the scaling factor for weights in case the network size is different
 alpha = get_scaling_factor_for_weights(NE, NI)
 
-simulation_time = 10 * second
+simulation_time = 5 * second
 vt = 1
 vr = 0
 
@@ -27,7 +27,7 @@ vr = 0
 C = 80
 n_clusters = int(NE / C)
 # cluster coef
-ree = 3.3
+ree = 2.5
 # average ee sparseness
 p_ee = 0.2
 cluster_weight_factor = 1.9
@@ -178,8 +178,9 @@ save_data(data=round_dict, filename=data_filename,
 # #
 plt.figure(figsize=(15, 5))
 raster_plot(sme, markersize=2)
-raster_plot(smi, markersize=2)
-plt.title('Spike trains of E neurons')
+#raster_plot(smi, markersize=2)
+plt.title('Spike trains of E neurons, $R_{ee}$=' + '{}'.format(ree))
 spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.pdf'
+plt.tight_layout()
 save_figure(filename=spiketrain_filename)
 plt.show()
