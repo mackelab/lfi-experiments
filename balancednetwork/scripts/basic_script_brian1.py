@@ -28,6 +28,7 @@ C = 80
 n_clusters = int(NE / C)
 # cluster coef
 ree = 2.5
+
 # average ee sparseness
 p_ee = 0.2
 cluster_weight_factor = 1.9
@@ -143,7 +144,7 @@ for realization in range(n_realizations):
     MIe = StateMonitor(P, 'I_e', record=example_neuron)
     MIi = StateMonitor(P, 'I_i', record=example_neuron)
 
-    sme = SpikeMonitor(Pe)
+    sme = SpikeMonitor(Pe[:400])
     smi = SpikeMonitor(Pi)
 
     net.add([Mv, MIe, MIi, sme, smi])
@@ -177,7 +178,7 @@ save_data(data=round_dict, filename=data_filename,
 
 # #
 plt.figure(figsize=(15, 5))
-raster_plot(sme, markersize=2)
+raster_plot(sme, markersize=4)
 #raster_plot(smi, markersize=2)
 plt.title('Spike trains of E neurons, $R_{ee}$=' + '{}'.format(ree))
 spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.pdf'
