@@ -10,9 +10,9 @@ from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGe
 
 
 n_params = 1
-n_cores_to_use = 4
-ntrain = 10
-nrounds = 1
+n_cores_to_use = 8
+ntrain = 200
+nrounds = 5
 save_data = True
 
 
@@ -50,6 +50,8 @@ if save_data and os.path.exists(path_to_save_folder):
     with open(filename, 'wb') as handle:
         pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     print(filename)
+elif save_data:
+    print('Path does not exist: {}'.format(path_to_save_folder))
 
 # extract the posterior
 n_components = len(posterior.a)
