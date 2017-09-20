@@ -12,18 +12,18 @@ from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGe
 n_params = 1
 n_cores_to_use = 8
 ntrain = 200
-nrounds = 5
+nrounds = 3
 save_data = True
 
 
-m = BalancedNetwork(dim=n_params, first_port=8010,
+m = BalancedNetwork(dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
 p = dd.Uniform(lower=[1.], upper=[5.])
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 
 # here we set the true params
-true_params = [[2.5]]
+true_params = [[4.5]]
 # run forward model
 data = m.gen(true_params)
 # get summary stats
@@ -33,7 +33,7 @@ stats_obs = s.calc(data[0])
 res = infer.SNPE(g, obs=stats_obs, n_components=1, pilot_samples=50)
 
 # run with N samples, for N=100 this will take 2000s = 0.6h
-out, trn_data = res.run(ntrain, nrounds, epochs=1000, minibatch=10)
+out, trn_data = res.run(ntrain, nrounds, epochs=1000, minibatch=100)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
