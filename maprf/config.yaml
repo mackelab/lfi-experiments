@@ -1,0 +1,67 @@
+sim:
+    dt: 0.025
+stim:
+    span:
+        x: [-5, 5]
+        y: [-5, 5]
+        t: 120
+    size:
+        x: 21
+        y: 21
+filt:
+    span:
+        t: 0.3
+params:
+    kernel:
+        s:
+            width: 2.5
+            ratio: 1.0
+            angle: 0.7
+            phase: 0.0
+            freq: 0.3
+            gain: 2.0
+        t:
+            value: 1.0
+    glm:
+        bias: -0.5
+        binsize: 0.025
+priors:
+    glm:
+        bias: 
+            name: gamma
+            varname: λo
+            alpha: 1.
+            beta:  0.                        
+    kernel:
+        s:
+            width:
+                name: lognormal
+                varname: log_b 
+                f: log
+                b: [1.5, 4.5]
+                a: [0.01, 0.99]
+            ratio:
+                name: lognormal
+                varname: log_γ
+                f: log
+                b: [0.5, 2]
+                a: [0.001, 0.99]
+            freq:
+                name: Rice
+                varname: vec_f
+                sigma: 1.0
+                kappa: 0.0
+            phase:
+                name: Rayleigh
+                varname: vec_A
+                sigma: 1.0
+            xo:
+                name: gennormal
+                varname: xo
+                range: [-5, 5]
+                gamma: 8
+            yo:
+                name: gennormal
+                varname: yo
+                range: [-5, 5]
+                gamma: 8
