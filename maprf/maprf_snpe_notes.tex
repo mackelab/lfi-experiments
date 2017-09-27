@@ -1,0 +1,55 @@
+\documentclass[10pt,english]{article}
+%\special{papersize=210mm,297mm}
+%\usepackage[a4paper,left=20mm,right=20mm, top=2.5cm, bottom=2.5cm]{geometry}
+\usepackage{epsfig}
+\usepackage{babel}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{units}
+\usepackage{pstricks}
+\usepackage{color}
+\usepackage{bm}
+\bibliographystyle{plain}
+
+% Super-handy maths abbreviations
+\newcommand{\yb}{\mathbf{y}}
+\newcommand{\xb}{\mathbf{x}}
+\newcommand{\Xb}{\mathbf{X}}
+\newcommand{\pstrxobs}{q_\phi(\theta|x_0)}
+\newcommand{\pstrx}{q_\phi(\theta|x)}
+
+
+\title{mapRF \& SNPE}
+\author{}
+\date{}
+
+\begin{document}
+
+
+\maketitle
+
+\section{Sufficient statistics for nonlinearly parametrized filters in GLMs}
+\label{seq:published_SVI}
+
+We consider the generalized linear model (GLMs) with Poisson noise distribution $\mathcal{P}(\bullet|\lambda)$, canonical link function $\eta= \log(\lambda)$ and linear predictor $\eta = \beta^\top \xb$. 
+Additionally, we assume the linear filter $\beta(\theta)$ itself to be a fixed (nonlinear) function of (lower-dimensional) parameter $\theta$. 
+\begin{align}
+p(\yb | \Xb, \theta) &= \prod_i p(y_i | \xb_i, \theta) \nonumber \\
+&= \prod_i \mathcal{P}\left(y_i | \lambda_i = \exp(\beta(\theta)^\top \xb_i) \right) \nonumber \\
+&= \prod_i  \frac{\lambda_i^{y_i}}{y_i!} \exp(-\lambda_i) \nonumber \\
+&= \prod_i \frac{1}{y_i!} \exp\left( y_i \beta(\theta)^\top \xb_i - \exp(\beta(\theta)^\top \xb_i) \right) \nonumber \\
+&= \frac{1}{\prod_i y_i!} \exp\left( y_i \sum_i \beta(\theta)^\top \xb_i - \exp(\beta(\theta)^\top \xb_i) \right) \nonumber \\
+&= \frac{1}{\prod_i y_i!} \exp\left( \beta(\theta)^\top \left(\Xb^\top \yb \right) - \sum_i  \exp(\beta(\theta)^\top \xb_i) \right) \nonumber \\
+&=: h(\yb) g_{(\theta, \Xb)}(T(\yb)) \nonumber
+\end{align}
+with 
+\begin{align}
+h(\yb) &:= \frac{1}{\prod_i y_i!} \nonumber \\
+g_{(\theta, \Xb)}(T(\yb)) &= \frac{1}{Z} \exp\left( \beta(\theta)^\top \left(\Xb^\top \yb \right) \right) \nonumber \\
+T(\yb) &= \Xb^\top \yb \nonumber 
+\end{align}
+Note that this derivation is analoguous to derivations of sufficient statistics for 'standard' GLMs that treat $\beta$ as an independent variable rather than parametrized $\beta(\theta)$.
+\begin{align}
+p(\theta | \yb, \Xb) = p(\theta | \Xb^\top\yb, \Xb)
+\end{align}
+\end{document}
