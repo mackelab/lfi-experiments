@@ -29,7 +29,7 @@
 \maketitle
 
 \section{Sufficient statistics for nonlinearly parametrized filters in GLMs}
-\label{seq:published_SVI}
+\label{seq:sufficiency_STA}
 
 We consider the generalized linear model (GLMs) with Poisson noise distribution $\mathcal{P}(\bullet|\lambda)$, canonical link function $\eta= \log(\lambda)$ and linear predictor $\eta = \beta^\top \xb$. 
 Additionally, we assume the linear filter $\beta(\theta)$ itself to be a fixed (nonlinear) function of (lower-dimensional) parameter $\theta$. 
@@ -52,4 +52,61 @@ Note that this derivation is analoguous to derivations of sufficient statistics 
 \begin{align}
 p(\theta | \yb, \Xb) = p(\theta | \Xb^\top\yb, \Xb)
 \end{align}
+
+\section{SNPE SVI}
+\label{seq:SVI_SNPV_vs_CDELFI}
+
+\subsection{Derivation of non-SVI losses for CDELFI and SNPE}
+Papamakarios \& Murray start out the derivation of their non-SVI algorithm from a variational approximation to a joint probability over $(\bf{x}, \theta)$ with convencience ('proposal
+) prior $\tilde{p}(\theta)$ :
+\begin{align}
+D_{KL}\left( \ p(\bf{x}|\theta) \ \tilde{p}(\theta) \ || \ \tilde{p}(\bf{x}) \ q_\phi(\theta|\bf{x}) \ \right) &= - E_{p(\bf{x}|\theta)\tilde{p}(\theta)}\left[ \log q_\phi(\theta | \bf{x}) \right] + const. \nonumber \\
+&\approx - \sum_n \log q_\phi(\theta_n | \bf{x}_n) \nonumber + const.
+\end{align}
+for $(\theta_n, \bf{x}_n) \sim \tilde{p}(\theta) p(\bf{x}|\theta)$.
+The righthand-side is a variational lower bound that is optimized using stochastic gradient descent. 
+Papamakarios \& Murray subsequently analytically correct for having used the wrong prior $\tilde{p}(\theta)$ in the loss, which however only works for certain functional forms for $p, \tilde{p}, q_\phi$.
+
+\paragraph{}\noindent{}SNPE directly optimises the joint probability for the true prior:
+\begin{align}
+D_{KL}\left( \ p(\bf{x}|\theta) \ p(\theta) \ || \ p(\bf{x}) \ q_\phi(\theta|\bf{x}) \ \right) &= - E_{p(\bf{x}|\theta)p(\theta)}\left[ \log q_\phi(\theta | \bf{x}) \right] + const. \nonumber \\
+&= - E_{p(\bf{x}|\theta)\tilde{p}(\theta)}\left[ \frac{p(\theta)}{\tilde{p}(\theta)} \log q_\phi(\theta | \bf{x}) \right] + const. \nonumber \\
+&\approx - \sum_n \frac{p(\theta_n)}{\tilde{p}(\theta_n)} \log q_\phi(\theta_n | \bf{x}_n) + const. \nonumber
+\end{align}
+
+\subsection{Derivation of SVI losses for CDELFI and SNPE}
+
+The derviation of the SVI loss in Papamakarios \& Murray is only sketched (appendix C). 
+Filling in between the rather verbal description of their approach, it seems to rest on 
+\begin{align}
+D_{KL}( \ q(\phi) \ || \ p(\phi \ | \ \{\bf{x}_n, \theta_n\}) \ ) &= - E_{q(\phi)}\left[ \log p(\phi \ | \ \{\bf{x}_n, \theta_n\}) \right]  + E_{q(\phi)}\left[ \log q(\phi) \right] \nonumber \\
+&= - E_{q(\phi)}\left[ \log p( \{\bf{x}_n, \theta_n\} \ | \ \phi) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber \\
+&= - E_{q(\phi)}\left[ \sum_n \log p( \bf{x}_n, \theta_n \ | \ \phi) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber \\
+&= - E_{q(\phi)}\left[ \sum_n \log q_\phi( \theta_n | \bf{x}_n) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber
+\end{align}
+where we plugged in the \textbf{likelihood} $p( \bf{x}_n, \theta_n \ | \ \phi) \propto q_\phi(\theta_n \ | \ \bf{x}_n) \tilde{p}(\bf{x}_n)$. 
+This choice of likelihood $p( \bf{x}_n, \theta_n \ | \ \phi)$ is sensible given that we desire
+\begin{align}
+q_\phi(\theta | \bf{x}) \ \tilde{p}(\bf{x}) \approx p(x |\theta) \ \tilde{p}(\theta) \nonumber
+\end{align}
+like in the non-SVI case, and we know that $(\theta_n, \bf{x}_n) \sim p(x|\theta)\tilde{p}(\theta)$ by construction of the artificial dataset.
+
+
+
+\noindent{}What for SNPE? The variational bound here (for the first round, and without calibration kernel) reads 
+\begin{align}
+D_{KL}( \ q(\phi) \ || \ p(\phi \ | \ \{\bf{x}_n, \theta_n\}) \ ) &= - E_{q(\phi)}\left[ \log p( \{ \bf{x}_n, \theta_n \ \} \ | \ \phi) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber \\
+&= - E_{q(\phi)}\left[ \sum_n \frac{p(\theta)}{\tilde{p}(\theta)}\log q_\phi( \theta_n | \bf{x}_n) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber
+\end{align}
+for the functional forms of $p(\phi)$ and $q(\phi)$. 
+Comparing with the above, we would require a likelihood 
+\begin{align}
+p( \bf{x}_n, \theta_n \ | \ \phi) \propto q_\phi(\theta_n \ | \ \bf{x}_n)^\frac{p(\theta_n)}{\tilde{p}(\theta_n)} 
+\end{align}
+Remember that we here also assume $(\theta_n, \bf{x}_n) \sim p(x|\theta)\tilde{p}(\theta)$, but that here we actually want
+\begin{align}
+q_\phi(\theta \ | \ \bf{x}) p(\bf{x}) \approx p(x |\theta) p(\theta), \nonumber
+\end{align}
+i.e. the approximate posterior $q_\phi$ directly approximates the true posterior given the actual prior $p(\theta)$.
+
 \end{document}
