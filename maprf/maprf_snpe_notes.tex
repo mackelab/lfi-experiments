@@ -11,6 +11,8 @@
 \usepackage{bm}
 \bibliographystyle{plain}
 
+\usepackage{framed}
+
 % Super-handy maths abbreviations
 \newcommand{\yb}{\mathbf{y}}
 \newcommand{\xb}{\mathbf{x}}
@@ -76,20 +78,20 @@ D_{KL}\left( \ p(\bf{x}|\theta) \ p(\theta) \ || \ p(\bf{x}) \ q_\phi(\theta|\bf
 
 \subsection{Derivation of SVI losses for CDELFI and SNPE}
 
-The derviation of the SVI loss in Papamakarios \& Murray is only sketched (appendix C). 
-Filling in between the rather verbal description of their approach, it seems to rest on 
+The derviation of the CDELFI SVI loss in Papamakarios \& Murray is only sketched (appendix D). 
+Filling in between the verbal description of their approach, it seems to rest on 
 \begin{align}
 D_{KL}( \ q(\phi) \ || \ p(\phi \ | \ \{\bf{x}_n, \theta_n\}) \ ) &= - E_{q(\phi)}\left[ \log p(\phi \ | \ \{\bf{x}_n, \theta_n\}) \right]  + E_{q(\phi)}\left[ \log q(\phi) \right] \nonumber \\
 &= - E_{q(\phi)}\left[ \log p( \{\bf{x}_n, \theta_n\} \ | \ \phi) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber \\
 &= - E_{q(\phi)}\left[ \sum_n \log p( \bf{x}_n, \theta_n \ | \ \phi) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber \\
 &= - E_{q(\phi)}\left[ \sum_n \log q_\phi( \theta_n | \bf{x}_n) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber
 \end{align}
-where we plugged in the \textbf{likelihood} $p( \bf{x}_n, \theta_n \ | \ \phi) \propto q_\phi(\theta_n \ | \ \bf{x}_n) \tilde{p}(\bf{x}_n)$. 
-This choice of likelihood $p( \bf{x}_n, \theta_n \ | \ \phi)$ is sensible given that we desire
+where we plugged in the \textbf{joint-data likelihood} $p( \bf{x}_n, \theta_n \ | \ \phi) \propto q_\phi(\theta_n \ | \ \bf{x}_n) \tilde{p}(\bf{x}_n)$. 
+This choice of likelihood $p( \bf{x}_n, \theta_n \ | \ \phi)$ is sensible given that we desired
 \begin{align}
 q_\phi(\theta | \bf{x}) \ \tilde{p}(\bf{x}) \approx p(x |\theta) \ \tilde{p}(\theta) \nonumber
 \end{align}
-like in the non-SVI case, and we know that $(\theta_n, \bf{x}_n) \sim p(x|\theta)\tilde{p}(\theta)$ by construction of the artificial dataset.
+already in the non-SVI case, and that in turn $(\bf{x}_n, \theta_n) \sim p(x|\theta)\tilde{p}(\theta)$ by construction of the artificial dataset.
 
 
 
@@ -98,15 +100,43 @@ like in the non-SVI case, and we know that $(\theta_n, \bf{x}_n) \sim p(x|\theta
 D_{KL}( \ q(\phi) \ || \ p(\phi \ | \ \{\bf{x}_n, \theta_n\}) \ ) &= - E_{q(\phi)}\left[ \log p( \{ \bf{x}_n, \theta_n \ \} \ | \ \phi) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber \\
 &= - E_{q(\phi)}\left[ \sum_n \frac{p(\theta)}{\tilde{p}(\theta)}\log q_\phi( \theta_n | \bf{x}_n) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber
 \end{align}
-for the functional forms of $p(\phi)$ and $q(\phi)$. 
-Comparing with the above, we would require a likelihood 
+for the functional forms of $p(\phi)$ and $q(\phi)$ as above.
+Note that we still draw data from the proposal prior, i.e.
 \begin{align}
-p( \bf{x}_n, \theta_n \ | \ \phi) \propto q_\phi(\theta_n \ | \ \bf{x}_n)^\frac{p(\theta_n)}{\tilde{p}(\theta_n)} 
-\end{align}
-Remember that we here also assume $(\theta_n, \bf{x}_n) \sim p(x|\theta)\tilde{p}(\theta)$, but that here we actually want
+(\bf{x}_n, \theta_n) \sim p(x|\theta)\tilde{p}(\theta),\nonumber
+\end{align} 
+but for SNPE we actually want to directly approximate the real posterior,
 \begin{align}
-q_\phi(\theta \ | \ \bf{x}) p(\bf{x}) \approx p(x |\theta) p(\theta), \nonumber
+q_\phi(\theta \ | \ \bf{x}) p(\bf{x}) \approx p(x |\theta) p(\theta). \nonumber
 \end{align}
-i.e. the approximate posterior $q_\phi$ directly approximates the true posterior given the actual prior $p(\theta)$.
+Thus the task here is to find a likelihood $p( \bf{x}_n, \theta_n \ | \ \phi)$ that bridges this gap: 
+on one hand being a good model for the data $(\bf{x}_n, \theta_n) \sim p(\bf{x}|\theta)\tilde{p}(\theta)$, but on the other hand being useful/adjustable to model $p(\bf{x} |\theta) p(\theta)$.
 
+Reading the likelihood off the variational bound however, we find
+\begin{align}
+p( \bf{x}_n, \theta_n \ | \ \phi) \propto q_\phi(\theta_n \ | \ \bf{x}_n)^\frac{p(\theta_n)}{\tilde{p}(\theta_n)}
+\label{eq:SNPE_likelihood}
+\end{align}
+
+\begin{framed}
+\noindent{}\textbf{Remark:} What exactly does such a likelihood correspond to? 
+
+Generally, is it even a proper likelihood? 
+Take for instance a uniform prior on scalar $\theta$ with $p(\theta) = \frac{1}{b-a}$ for $\theta \in [a,b]$ and finite $a,b\in\mathbb{R}, b>a$, and $p(\theta) = 0$ otherwise. 
+If the proposal prior has infinite support (as is the case if it is Gaussian), then the likelihood for fixed $\phi$ has density$p(\bf{x}, \theta \ | \ \phi) = 1$
+for $(\bf{x}, \theta)$ with $\theta \notin [a,b]$.
+Since $a,b$ are finite, $p(\bf{x}, \theta \ | \ \phi)$ in this case cannot be normalized over the full support $(\bf{x}, \theta) \in \mathbb{R}^{dim(\bf{x})} \times \mathbb{R}$. 
+
+An immediate next question is whether we need any (normalization) constraints on $p(\theta)/\tilde{p}(\theta)$ for eq. \ref{eq:SNPE_likelihood} to be a valid likelihood - if such constraints exist, they could lead to sensible normalization factors for the importance weights. 
+Note that any such normalization factor $Z$ would show up as a sort of global temperature, as in $p( \bf{x}_n, \theta_n \ | \ \phi)^{\frac{1}{Z}}$
+\end{framed}
+
+\begin{framed}
+\noindent{}\textbf{Remark:} An alternative likelihood to eq. \ref{eq:SNPE_likelihood} one might consider is 
+\begin{align}
+p( \bf{x}_n, \theta_n \ | \ \phi) \propto q_\phi(\theta_n \ | \ \bf{x}_n) \frac{p(\theta_n) \ \tilde{p}(\bf{x}_n)}{\tilde{p}(\theta_n) \ p(\bf{x}_n)},
+\end{align}
+since it is the density that translates between the known real and proposal priors. 
+The multiplicative factors $\frac{p(\theta_n) \ \tilde{p}(\bf{x}_n)}{\tilde{p}(\theta_n) \ p(\bf{x}_n)}$ however are just constant factors in the loss that have no influence on the optimization results - we would recover the exact same solution as CDELFI and still need to explicitly correct for the proposal prior post-learning. 
+\end{framed}
 \end{document}
