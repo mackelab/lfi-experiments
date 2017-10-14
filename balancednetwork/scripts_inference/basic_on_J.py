@@ -12,9 +12,9 @@ from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGe
 n_params = 4
 n_cores_to_use = 4
 
-ntrain = 10
-n_minibatch = 10
-n_pilot_samples = 0
+ntrain = 1000
+n_minibatch = 100
+n_pilot_samples = 30
 
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
@@ -33,10 +33,10 @@ data = m.gen(true_params)
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.Basic(g, n_components=3, pilot_samples=0)
+res = infer.Basic(g, n_components=3, pilot_samples=n_pilot_samples)
 
 # run with N samples
-out, trn_data = res.run(ntrain, epochs=1000, minibatch=10)
+out, trn_data = res.run(ntrain, epochs=1000, minibatch=n_minibatch)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
