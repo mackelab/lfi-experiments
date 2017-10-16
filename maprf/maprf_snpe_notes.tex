@@ -133,8 +133,7 @@ q_\phi(\theta | \bf{x})^\frac{p(\theta)}{\tilde{p}(\theta)} &\propto \exp c \exp
 q_\phi(\theta | \bf{x})^\frac{p(\theta)}{\tilde{p}(\theta)} &\rightarrow 1 \mbox{ for } \theta \rightarrow \pm \infty \nonumber \mbox{ and } \tilde{\sigma}^{-2} < \sigma^{-2}
 \end{align}
 where $c \leq 0$ is a constant, and parameters $\mu, \tilde{\mu}, \mu_\phi$ correspond to prior $p$, proposal prior $\tilde{p}$ and posterior approximation $q_\phi$, respectively.
-While this might not be of high practical relevance in most cases (we usually want to use proposals that are narrower than the prior), this adds an another constraint that was not there before. 
-When the observed data does not constrain a certain parameter (i.e. after converence we should have $\tilde{\sigma} = \sigma$, we might indeed get $\tilde{\sigma} > \sigma$ due to random fluctuations in the artificial data set.
+Most application scenarios will have $\tilde{\sigma} < \sigma$, but this was neither assumed a necessary condition so far, nor can it be guaranteed under all circumstances. 
 
 An immediate next question is whether we need any (normalization) constraints on $p(\theta)/\tilde{p}(\theta)$ for eq. \ref{eq:SNPE_likelihood} to be a valid likelihood - if such constraints exist, they could lead to sensible normalization factors for the importance weights. 
 Note that any such normalization factor $Z$ would show up as a sort of global temperature, as in $p( \bf{x}_n, \theta_n \ | \ \phi)^{\frac{1}{Z}}$
