@@ -12,11 +12,11 @@ from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGe
 n_params = 4
 n_cores_to_use = 4
 
-ntrain = 20
-n_minibatch = 10
-n_pilot_samples = 0
+ntrain = 300
+n_minibatch = 100
+n_pilot_samples = 30
 
-nrounds = 2
+nrounds = 4
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
 
@@ -37,21 +37,10 @@ stats_obs = s.calc(data[0])
 res = infer.SNPE(g, obs=stats_obs, n_components=3, pilot_samples=n_pilot_samples)
 
 # run with N samples
-out, trn_data = res.run(ntrain, epochs=1000, minibatch=n_minibatch)
+out, trn_data = res.run(ntrain, nrounds, epochs=1000, minibatch=n_minibatch)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
-
-# set up a dict for saving the results
-if save_data and os.path.exists(path_to_save_folder):
-    result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                       posterior=posterior, out=out, trn_data=trn_data)
-
-    filename = os.path.join(path_to_save_folder,
-                            '{}_snpe_J_r{}_ntrain{}'.format(time.time(), nrounds, ntrain).replace('.', '') + '.p')
-    with open(filename, 'wb') as handle:
-        pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    print(filename)
 
 result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
                    posterior=posterior, out=out, trn_data=trn_data)
