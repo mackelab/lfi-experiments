@@ -127,6 +127,15 @@ If the proposal prior has infinite support (as is the case if it is Gaussian), t
 for $(\bf{x}, \theta)$ with $\theta \notin [a,b]$.
 Since $a,b$ are finite, $p(\bf{x}, \theta \ | \ \phi)$ in this case cannot be normalized over the full support $(\bf{x}, \theta) \in \mathbb{R}^{dim(\bf{x})} \times \mathbb{R}$. 
 
+Similarly, if $p(\theta), \tilde{p}(\theta)$ and $q_\phi(\theta|\bf{x})$ all are univariate Gaussians, one can show that $p(\bf{x},\theta | \phi)$ becomes unnormalizable (for any fixed $\bf{x}$) if the proposal $\tilde{p}$ is broader than the prior $p$, i.e. $\tilde{\sigma}^2 > \sigma^2$:
+\begin{align}
+q_\phi(\theta | \bf{x})^\frac{p(\theta)}{\tilde{p}(\theta)} &\propto \exp c \exp \left( 2 \log \frac{|\theta - \mu_{\phi}|}{\sigma_{\phi}} + \left(\frac{\mu}{\sigma} - \frac{\tilde{\mu}}{\tilde{\sigma}}\right) \theta - \left(\sigma^{-2} - \tilde{\sigma}^{-2} \right) \theta^2 \right) \nonumber, \\
+q_\phi(\theta | \bf{x})^\frac{p(\theta)}{\tilde{p}(\theta)} &\rightarrow 1 \mbox{ for } \theta \rightarrow \pm \infty \nonumber \mbox{ and } \tilde{\sigma}^{-2} < \sigma^{-2}
+\end{align}
+where $c \leq 0$ is a constant, and parameters $\mu, \tilde{\mu}, \mu_\phi$ correspond to prior $p$, proposal prior $\tilde{p}$ and posterior approximation $q_\phi$, respectively.
+While this might not be of high practical relevance in most cases (we usually want to use proposals that are narrower than the prior), this adds an another constraint that was not there before. 
+When the observed data does not constrain a certain parameter (i.e. after converence we should have $\tilde{\sigma} = \sigma$, we might indeed get $\tilde{\sigma} > \sigma$ due to random fluctuations in the artificial data set.
+
 An immediate next question is whether we need any (normalization) constraints on $p(\theta)/\tilde{p}(\theta)$ for eq. \ref{eq:SNPE_likelihood} to be a valid likelihood - if such constraints exist, they could lead to sensible normalization factors for the importance weights. 
 Note that any such normalization factor $Z$ would show up as a sort of global temperature, as in $p( \bf{x}_n, \theta_n \ | \ \phi)^{\frac{1}{Z}}$
 \end{framed}
