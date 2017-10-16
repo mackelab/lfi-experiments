@@ -101,7 +101,8 @@ D_{KL}( \ q(\phi) \ || \ p(\phi \ | \ \{\bf{x}_n, \theta_n\}) \ ) &= - E_{q(\phi
 &= - E_{q(\phi)}\left[ \sum_n \frac{p(\theta)}{\tilde{p}(\theta)}\log q_\phi( \theta_n | \bf{x}_n) \right]  + D_{KL}( \ q(\phi) \ || \ p(\phi) \ )  + const. \nonumber
 \end{align}
 for the functional forms of $p(\phi)$ and $q(\phi)$ as above.
-Specifically, $p(\phi)$ on the first round coincides with the zero-meanspherical Gaussian used by Papamakarios \& Murray, and is replaced with the previous round's posterior afterwards, $p(\phi) \leftarrow q(\phi)$.
+Specifically, $p(\phi)$ on the first round coincides with the zero-mean spherical Gaussian used by Papamakarios \& Murray, and is replaced with the previous round's posterior afterwards, $p(\phi) \leftarrow q(\phi)$.
+
 Note that we still draw data from the proposal prior, i.e.
 \begin{align}
 (\bf{x}_n, \theta_n) \sim p(x|\theta)\tilde{p}(\theta),\nonumber
