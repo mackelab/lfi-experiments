@@ -11,12 +11,16 @@ from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGe
 
 n_params = 4
 n_cores_to_use = 4
-ntrain = 10
-nrounds = 1
+
+ntrain = 300
+n_minibatch = 100
+n_pilot_samples = 30
+
+nrounds = 4
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
 
-m = BalancedNetwork(dim=n_params, first_port=8010,
+m = BalancedNetwork(dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
 p = dd.Uniform(lower=[0.01] * n_params, upper=[0.1] * n_params)
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
@@ -30,21 +34,30 @@ data = m.gen(true_params)
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.SNPE(g, obs=stats_obs, n_components=3, pilot_samples=50)
+res = infer.SNPE(g, obs=stats_obs, n_components=3, pilot_samples=n_pilot_samples)
 
 # run with N samples
-out, trn_data = res.run(ntrain, epochs=1000, minibatch=10)
+out, trn_data = res.run(ntrain, nrounds, epochs=1000, minibatch=n_minibatch)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
 
+result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
+                   posterior=posterior, out=out, trn_data=trn_data)
+
 # set up a dict for saving the results
 if save_data and os.path.exists(path_to_save_folder):
-    result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                       posterior=posterior, out=out, trn_data=trn_data)
 
     filename = os.path.join(path_to_save_folder,
                             '{}_snpe_J_r{}_ntrain{}'.format(time.time(), nrounds, ntrain).replace('.', '') + '.p')
+
     with open(filename, 'wb') as handle:
         pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     print(filename)
+elif save_data:
+    print('Path does not exist: {} saving in .'.format(path_to_save_folder))
+
+    filename = '{}_snpe_J_r{}_ntrain{}'.format(time.time(), nrounds, ntrain).replace('.', '') + '.p'
+
+    with open(filename, 'wb') as handle:
+        pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
