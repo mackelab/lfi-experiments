@@ -12,7 +12,7 @@ from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGe
 n_params = 4
 n_cores_to_use = 4
 
-ntrain = 300
+ntrain = 500
 n_minibatch = 100
 n_pilot_samples = 30
 
@@ -34,7 +34,7 @@ data = m.gen(true_params)
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.SNPE(g, obs=stats_obs, n_components=3, pilot_samples=n_pilot_samples)
+res = infer.SNPE(g, obs=stats_obs, n_components=1, pilot_samples=n_pilot_samples)
 
 # run with N samples
 out, trn_data = res.run(ntrain, nrounds, epochs=1000, minibatch=n_minibatch)
