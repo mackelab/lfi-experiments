@@ -17,49 +17,56 @@ except:
 
 n_params = 1
 n_cores_to_use = 4
-ntrain = 10
+
+ntrain = 100
+n_minibatch = 100
+n_pilot_samples = 20
+
 save_data = True
+path_to_save_folder = '../data/'  # has to exist on your local path
 
+j_index = 0
+true_params = [0.024, 0.045, 0.014, 0.057]  # params from the paper
+j_label = ['ee', 'ei', 'ie', 'ii'][j_index]
+true_param = [true_params[j_index]]
+param_name = 'w' + j_label
 
-m = BalancedNetwork('ree', dim=n_params, first_port=8010,
+m = BalancedNetwork(inference_param=param_name, dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
-p = dd.Uniform(lower=[1.], upper=[5.])
+p = dd.Uniform(lower=[0.01] * n_params, upper=[0.07] * n_params)
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 
-# here we set the true params
-true_params = [[2.5]]
 # run forward model
-data = m.gen(true_params)
+data = m.gen(true_param)
 # get summary stats
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.Basic(g, n_components=1, pilot_samples=50)
+res = infer.Basic(g, n_components=1, pilot_samples=n_pilot_samples)
 
-out, trn_data = res.run(ntrain, epochs=1000, minibatch=10)
+# run with N samples
+out, trn_data = res.run(ntrain, epochs=1000, minibatch=n_minibatch)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
 
+nrounds = 1
+result_dict = dict(true_params=true_param, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
+                   posterior=posterior, out=out, trn_data=trn_data)
+
+filename = '{}_basic_J{}_ntrain{}'.format(time.time(), j_label, ntrain).replace('.', '') + '.p'
+print(filename)
+
 # set up a dict for saving the results
-path_to_save_folder = '../data/'  # has to exist on your local path
-
 if save_data and os.path.exists(path_to_save_folder):
-    nrounds = 1
-    result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                       posterior=posterior, out=out, trn_data=trn_data)
 
-    filename = os.path.join(path_to_save_folder,
-                            '{}_basic_ree_ntrain{}'.format(time.time(), ntrain).replace('.', '') + '.p')
+    filepath = os.path.join(path_to_save_folder, filename)
+
+    with open(filepath, 'wb') as handle:
+        pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+elif save_data:
+    print('Path does not exist: {} saving in .'.format(path_to_save_folder))
+
     with open(filename, 'wb') as handle:
         pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    print(filename)
-
-# extract the posterior
-n_components = len(posterior.a)
-means = [posterior.xs[c].m for c in range(n_components)]
-Ss = [posterior.xs[c].S for c in range(n_components)]
-
-print('Predicited: {} +- {}'.format(means, Ss))
-print('True: {}'.format(true_params))

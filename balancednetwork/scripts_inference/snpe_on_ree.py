@@ -4,10 +4,16 @@ import os
 import pickle
 import time
 
-from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
-from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
-from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
-
+try:
+    from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
+    from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
+    from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
+except:
+    import sys
+    sys.path.append('../../../lfimodels')
+    from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
+    from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
+    from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 n_params = 1
 n_cores_to_use = 8
@@ -16,7 +22,7 @@ nrounds = 3
 save_data = True
 
 
-m = BalancedNetwork(dim=n_params, first_port=9000,
+m = BalancedNetwork('ree', dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
 p = dd.Uniform(lower=[1.], upper=[5.])
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
