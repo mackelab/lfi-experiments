@@ -18,7 +18,7 @@ except:
 n_params = 1
 n_cores_to_use = 4
 
-ntrain = 100
+ntrain = 400
 n_minibatch = 100
 n_pilot_samples = 20
 
@@ -33,7 +33,7 @@ param_name = 'w' + j_label
 
 m = BalancedNetwork(inference_param=param_name, dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
-p = dd.Uniform(lower=[0.01] * n_params, upper=[0.07] * n_params)
+p = dd.Uniform(lower=[0.01] * n_params, upper=[0.05] * n_params)
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 
@@ -53,7 +53,7 @@ posterior = res.predict(stats_obs)
 
 nrounds = 1
 result_dict = dict(true_params=true_param, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                   posterior=posterior, out=out, trn_data=trn_data)
+                   posterior=posterior, out=out, trn_data=trn_data, prior=p)
 
 filename = '{}_basic_J{}_ntrain{}'.format(time.time(), j_label, ntrain).replace('.', '') + '.p'
 print(filename)

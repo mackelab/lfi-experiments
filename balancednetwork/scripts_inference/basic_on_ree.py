@@ -18,6 +18,7 @@ except:
 n_params = 1
 n_cores_to_use = 4
 ntrain = 10
+n_pilot_samples = 0
 save_data = True
 
 
@@ -35,7 +36,7 @@ data = m.gen(true_params)
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.Basic(g, n_components=1, pilot_samples=50)
+res = infer.Basic(g, n_components=1, pilot_samples=n_pilot_samples)
 
 out, trn_data = res.run(ntrain, epochs=1000, minibatch=10)
 

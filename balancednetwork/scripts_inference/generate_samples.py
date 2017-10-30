@@ -16,7 +16,7 @@ except:
 
 n_params = 1
 n_cores_to_use = 4
-nsampels = 1000
+nsampels = 300
 save_data = True
 
 param_name = 'wee'
