@@ -147,6 +147,11 @@ for realization in range(n_realizations):
     sme = SpikeMonitor(Pe[:400])
     smi = SpikeMonitor(Pi)
 
+    spiketimedict_e = sme.getspiketimes()
+    spiketimedict_i = smi.getspiketimes()
+    spiketimedict = {'{}'.format(k): v.tolist() for k, v in spiketimedict_e.items()}
+    
+
     net.add([Mv, MIe, MIi, sme, smi])
 
     for trial in range(n_trials):
