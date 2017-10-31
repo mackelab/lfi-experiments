@@ -7,7 +7,7 @@ from balancednetwork.utils import *
 n_realizations = 1
 n_trials = 1
 
-np.random.seed(11)
+np.random.seed(1)
 
 # create simulation network
 net = Network()
@@ -19,7 +19,7 @@ N = NE + NI
 # get the scaling factor for weights in case the network size is different
 alpha = get_scaling_factor_for_weights(NE, NI)
 
-simulation_time = 5 * second
+simulation_time = 3 * second
 vt = 1
 vr = 0
 
@@ -144,7 +144,7 @@ for realization in range(n_realizations):
     MIe = StateMonitor(P, 'I_e', record=example_neuron)
     MIi = StateMonitor(P, 'I_i', record=example_neuron)
 
-    sme = SpikeMonitor(Pe[:400])
+    sme = SpikeMonitor(Pe)
     smi = SpikeMonitor(Pi)
 
     spiketimedict_e = sme.getspiketimes()
@@ -182,10 +182,14 @@ save_data(data=round_dict, filename=data_filename,
           folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/')
 
 # #
-plt.figure(figsize=(15, 5))
+plt.figure(figsize=(15, 8))
+plt.subplot(211)
 raster_plot(sme, markersize=4)
-#raster_plot(smi, markersize=2)
 plt.title('Spike trains of E neurons, $R_{ee}$=' + '{}'.format(ree))
+
+plt.subplot(212)
+raster_plot(smi, markersize=4)
+
 spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.pdf'
 plt.tight_layout()
 save_figure(filename=spiketrain_filename)

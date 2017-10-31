@@ -16,13 +16,13 @@ except:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 n_params = 1
-n_cores_to_use = 4
+n_cores_to_use = 3
 
 ntrain = 200
 n_minibatch = 100
 n_pilot_samples = 30
 
-nrounds = 2
+nrounds = 3
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
 j_index = 0
@@ -33,7 +33,7 @@ param_name = 'w' + j_label
 
 m = BalancedNetwork(inference_param=param_name, dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
-p = dd.Uniform(lower=[0.01] * n_params, upper=[0.1] * n_params)
+p = dd.Uniform(lower=[0.01] * n_params, upper=[0.05] * n_params)
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 

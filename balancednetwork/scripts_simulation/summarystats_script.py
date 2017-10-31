@@ -1,9 +1,9 @@
 from utils import *
 
 # uniform
-filenames = [ 'data_ree1.9.p', 'data_ree2.5.p', 'data_ree3.1.p']
+filenames = ['150945178192ree10_dur100_brain1.p']
 # clustered
-# filenames = ['150117497016ree32_dur50_brain1.p']
+filenames = ['150945172328ree42_dur100_brain1.p']
 
 for filename in filenames:
     folder = '/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/'
