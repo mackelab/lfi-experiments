@@ -10,19 +10,19 @@ try:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 except:
     import sys
-    sys.path.append('../../../lfimodels')
+    sys.path.append('../../../lfi-models')
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 n_params = 1
 n_cores_to_use = 4
-ntrain = 10
-n_pilot_samples = 0
+ntrain = 100
+n_pilot_samples = 20
 save_data = True
 
 
-m = BalancedNetwork('ree', dim=n_params, first_port=8010,
+m = BalancedNetwork(dim=n_params, first_port=8010,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
 p = dd.Uniform(lower=[1.], upper=[5.])
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
