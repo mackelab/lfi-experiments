@@ -10,7 +10,7 @@ try:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 except:
     import sys
-    sys.path.append('../../../lfimodels')
+    sys.path.append('../../../lfi-models')
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator

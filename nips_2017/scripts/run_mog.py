@@ -1,13 +1,19 @@
-#!/bin/bash
+#!/bin/python
 import fire
 import multiprocessing
 import os
+import pdb
 import pickle
 import random
 import string
 import time
 
 from tqdm import tqdm
+
+
+PATH_POSTERIOR = '../results/mog/{}_seed_{}_round_{}_posterior.pkl'
+PATH_INFERENCE = '../results/mog/{}_seed_{}_round_{}_inference.pkl'
+PATH_KL = '../results/mog/{}_kl.npy'
 
 
 def run_single(algo='CDELFI', rounds=2, seed=None, verbose=True):
@@ -35,15 +41,18 @@ def run_single(algo='CDELFI', rounds=2, seed=None, verbose=True):
     obs = np.array([[0.]])
     kwargs = {'generator': g,
               'n_components': 2,
-              'n_hiddens': [10],
+              'n_hiddens': [20],
               'obs': obs,
               'seed': seed,
-              'verbose': verbose}
+              'verbose': verbose,
+              'prior_norm': False,
+              'pilot_samples': 0,
+              'reg_lambda': 0.01}
 
     if algo == 'Basic':
         del kwargs['obs']
         inf = Basic(**kwargs)
-    elif algo == 'CDELFI':
+    if algo == 'CDELFI':
         inf = CDELFI(**kwargs)
     elif algo == 'SNPE':
         inf = SNPE(**kwargs)
@@ -57,16 +66,20 @@ def run_single(algo='CDELFI', rounds=2, seed=None, verbose=True):
 
     try:
         if algo == 'Basic':
-            logs, train_datasets = inf.run(n_train=2000)
+            logs, train_datasets, posteriors = inf.run(n_train=2000)
         else:
-            logs, train_datasets = inf.run(n_train=train)
-        posterior = inf.predict(obs)
+            logs, train_datasets, posteriors = inf.run(n_train=train, n_rounds=rounds)
+        posterior = posteriors[-1]
     except:
         posterior = None
         pass
 
-    io.save(inf, '../results/mog/{}_seed_{}_round_{}_inf.pkl'.format(algo, seed, rounds))
-    io.save_pkl(posterior, '../results/mog/{}_seed_{}_round_{}_posterior.pkl'.format(algo, seed, rounds))
+    if verbose:
+        for p in posteriors:
+            print('var c1 : {}'.format(p.xs[0].S))
+
+    io.save(inf, PATH_INFERENCE.format(algo, seed, rounds))
+    io.save_pkl(posterior, PATH_POSTERIOR.format(algo, seed, rounds))
 
 def run_many_single_seed(seed=None, verbose=False):
     # run multiple algorithms for varying number of rounds for one seed
@@ -100,7 +113,8 @@ def run_many_range_of_seeds(start=1, end=10):
     work = run_many_single_seed
     #work = test_work
 
-    for res in tqdm(pool.imap_unordered(work, tasks), total=len(tasks),
+    for res in tqdm(pool.imap_unordered(work, tasks),
+                    total=len(tasks),
                     desc='seed '):
         pass
 
@@ -109,6 +123,37 @@ def run_many_range_of_seeds(start=1, end=10):
 
 def test_work(x):
     time.sleep(x)
+
+def compute_kl():
+    import delfi.distribution as dd
+    import delfi.utils.io as io
+    import numpy as np
+
+    gt_posterior = dd.MoG(a=[0.5, 0.5],
+                          ms=[[0.],[0.]],
+                          Ss=[[[1.]],[[0.1]]])
+    samples = gt_posterior.gen(100000)
+
+    seeds = 20
+    rounds = 6
+
+    res = {}
+    for a in ['CDELFI', 'SNPE']:
+        res[a] = -1*np.ones((rounds-1, seeds))
+
+        for s in range(10, seeds+1):
+            for r in range(2, rounds+1):
+                fname = PATH_POSTERIOR.format(a, s, r)
+                try:
+                    posterior = io.load_pkl(fname)
+                    kl_tp = np.mean( gt_posterior.eval(samples) - posterior.eval(samples) )
+                    res[a][r-2, s-1] = kl_tp
+                    print('success')
+                except:
+                    print('error on {}'.format(fname))
+                    pass
+
+            np.save(PATH_KL.format(a), res[a])
 
 if __name__ == '__main__':
     fire.Fire()

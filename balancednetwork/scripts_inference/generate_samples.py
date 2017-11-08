@@ -16,14 +16,14 @@ except:
 
 n_params = 1
 n_cores_to_use = 4
-nsampels = 300
+nsampels = 200
 save_data = True
 
 param_name = 'wee'
 
 m = BalancedNetwork(param_name, dim=n_params, first_port=8010,
                     verbose=True, n_servers=n_cores_to_use, duration=5.)
-p = dd.Uniform(lower=[0.01], upper=[0.1])
+p = dd.Uniform(lower=[0.01], upper=[0.05])
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
 
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
