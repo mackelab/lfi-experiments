@@ -1,0 +1,157 @@
+\documentclass[10pt,english]{article}
+%\special{papersize=210mm,297mm}
+\usepackage[a4paper,left=20mm,right=20mm, top=2.5cm, bottom=2.5cm]{geometry}
+\usepackage{epsfig}
+\usepackage{babel}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{units}
+\usepackage{pstricks}
+\usepackage{color}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdfborder={0 0 0},
+  	        colorlinks=true,% hyperlinks will be coloured
+  	        linkcolor=blue,
+            breaklinks=true}
+\usepackage{bm}
+\usepackage{xcolor}
+\bibliographystyle{plain}
+\usepackage{amsmath,amssymb}
+
+\setlength{\parindent}{2em}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\KL}{D_{\text{KL}}}
+
+\newcommand{\mathbold}[1]{\ensuremath{\boldsymbol{\mathbf{#1}}}}
+
+\newcommand{\btheta}{\mathbold{\theta}}
+\newcommand{\bs}{\mathbold{s}}
+\newcommand{\bx}{\mathbold{x}}
+\newcommand{\bxo}{\mathbold{x}_o}
+\newcommand{\bphi}{\mathbold{\phi}}
+\newcommand{\bpsi}{\mathbold{\psi}}
+\newcommand{\bepsilon}{\mathbold{\epsilon}}
+\newcommand{\bzero}{\mathbold{0}}
+\newcommand{\beye}{\mathbold{I}}
+\newcommand{\btau}{\mathbold{\tau}}
+
+\newcommand{\bmu}{\mathbold{\mu}}
+\newcommand{\bLambda}{\mathbold{\Lambda}}
+\newcommand{\blambda}{\mathbold{\lambda}}
+\newcommand{\balpha}{\mathbold{\alpha}}
+\newcommand{\bSigma}{\mathbold{\Sigma}}
+
+\newcommand{\qphi}{q_{\bphi}(\btheta|\bx)}
+\newcommand{\qphin}{q_{\bphi}(\btheta_n|\bx_n)}
+\newcommand{\qsvi}{\tilde{q}}
+
+\newcommand{\ptilde}{{\tilde{p}(\bx)}}
+\newcommand{\ptilden}{{\tilde{p}(\bx_n)}}
+\newcommand{\px}{{p(\bx)}}
+\newcommand{\pxn}{{p(\bx_n)}}
+
+\newcommand{\likelihood}{p(\bx|\btheta)}
+\newcommand{\likelihoodn}{p(\bx|\btheta_n)}
+
+\newcommand{\approxposterior}{\hat{p}(\btheta|\bx)}
+\newcommand{\approxposteriorxo}{\hat{p}(\btheta|\bx = \bxo)}
+
+\newcommand{\loss}{\mathcal{L}}
+\newcommand{\lossphi}{\mathcal{L}(\bphi)}
+
+\newcommand{\K}{K_{\tau}}
+
+
+\def\eps{\varepsilon}
+
+\title{Variance Estimation using Proposal Priors}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+We fix our prior $\px$ and our proposal prior $\ptilde$. Sampling independent samples $\bx_n$ from $\ptilde$, the MLE estimate for the variance of $\px$ is given by
+
+\begin{align}\label{eq:master}
+\frac{\sum_{n=1}^N w_n (\bx_n - \bmu)^2 }{\sum_n w_n} 
+\end{align}
+
+
+\noindent where the are the importance weights. We write
+
+\[ \sum_{n=1}^N w_n = N + \sum_{n=1}^N (w_n - 1) =: N + \sum_{n=1} \eps_n =: N + \eps \]
+
+
+\noindent Here, $\eps$ is a random variable with variance $\approx N$. For large enough $N$, the ratio $\frac \eps N$ (the average deviation around the mean) is likely to be small and we can perform a Taylor expansion of Eq. \ref{eq:master} with respect to $\eps$:
+
+\begin{align*}
+\frac{\sum_{n=1}^N w_n (\bx_n - \bmu)^2 }{N + \eps} &= \frac 1 N \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) \left (1 - \frac \eps N + \frac {\eps^2} {N^2} - \frac {\eps^3} {N^3} + \ldots \right)
+\end{align*}
+
+
+\noindent We now focus on the linear term. A simple calculation yields:
+
+\begin{align*}
+\frac 1 N \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) \frac \eps N &= \frac 1 {N^2} \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) \left(\sum_{n=1}^N (w_n - 1) \right) \\ 
+&=\frac 1 {N^2} \sum_{n\neq m=1}^N w_n w_m (\bx_n - \bmu)^2 + \frac 1 {N^2} \sum_{n=1}^N w_n^2 (\bx_n - \bmu)^2 - \frac 1 N \sum_{n=1}^N w_n (\bx_n - \bmu)^2
+\end{align*}
+
+
+\noindent Thus we get
+
+\begin{align*}
+ \frac 1 N \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) (1 - \frac \eps N) &=  \frac 2 N \sum_{n=1}^N w_n (\bx_n - \bmu)^2 - \frac 1 {N^2} \sum_{n\neq m=1}^N w_n w_m (\bx_n - \bmu)^2 - \frac 1 {N^2} \sum_{n=1}^N w_n^2 (\bx_n - \bmu)^2
+\end{align*}
+
+\noindent This is a first-order (in $\frac \eps N$) approximation of Eq. \ref{eq:master}. Keeping in mind that the weights are functions of the (independent) random variables $\bx_n$, the expected value is equal to
+
+\begin{align*}
+2 \E_\px((\bx - \bmu)^2) &- \frac {N-1}{N} \E_\px((\bx - \bmu)^2) - \frac 1 N \E_\px(w(\bx - \bmu)^2) \\
+&= \E_\px((\bx - \bmu)^2) + \frac 1 N \left(E_\px((\bx - \bmu)^2) - \E_\px(w(\bx - \bmu)^2)\right)
+\end{align*} 
+
+\noindent where $\E_\px$ denotes the expected value with respect to the prior $\px$. We read off from this that our estimator has a bias of approximately 
+
+\[ \frac 1 {N} \left(E_\px(\bx^2) - E_\px(w\bx^2)\right) \]
+
+\noindent This is consistent with the fact that the bias should disappear as $N \rightarrow \infty$, or if $w \equiv 1$, ie. $\px = \ptilde$.
+
+A note on the validity of the Taylor expansion: $\eps$ has variance $\frac 1 N$. By the Chebyshev inequality, $\eps$ will be very small with an overwhelming probability, so the Taylor expansion can be applied. In any case, this is just an asymptotic estimate of the bias.
+
+We apply this to the model where $\px \sim \mathcal{N}(0, \sigma^2)$ and $\ptilde \sim \mathcal{N}(0, \eta^2)$, with $\eta < \sigma$. Then we have
+
+\[ w(\bx) = \frac{\eta}{\sigma} e^{\frac d 2 \bx^2} \]
+
+\noindent where we let $d = \frac{1}{\eta^2} - \frac{1}{\sigma^2} > 0$. From the above expression we get that our estimator is biased towards underestimating the correct variance if $\E_\px(w\bx^2) > \E_\px(\bx^2)$, which is the case for our toy problem.
+
+
+We now perform the full Taylor expansion, considering all higher-order terms. For this it will prove convenient to define the shifted weights $\tilde w_n = w_n - 1$. It follows that
+
+\begin{align*}
+\eps^k &= \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \\
+\sum_{n=1}^N w_n (\bx_n - \bmu)^2 &= \sum_{n=1}^N \tilde w_n (\bx_n - \bmu)^2 + \sum_{n=1}^N (\bx_n - \bmu)^2
+\end{align*}
+
+\noindent Attempting to calculate the expected values of the terms, we remark that the $\tilde w_n$ are independent random variables, that $\tilde w_n$ is independent of $\bx_m$ for $n \neq m$, and that the $\tilde w_n$ have mean $0$. Using the formula $\E(XY) = \E(X)\E(Y) = 0$ for independent random variables $X, Y$ with $\E(Y) = 0$ we get:
+
+\begin{align*}
+\E\left[\frac 1 N \left(\sum_{n=1}^N \tilde w_n (\bx_n - \bmu)^2\right)\left( \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \right)\right] &= \frac 1 N \sum_{n=1}^N \E\left(\tilde w^{k+1} (\bx - \bmu)^2\right) &= \E\left(\tilde w^{k+1} (\bx - \bmu)^2\right)\\
+\E\left[\frac 1 N \left(\sum_{n=1}^N (\bx_n - \bmu)^2\right)\left( \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \right)\right] &= \frac 1 N \sum_{n=1}^N \E\left(\tilde w^k (\bx - \bmu)^2\right) &= \E\left(\tilde w^k (\bx - \bmu)^2\right) \\
+\E\left[\frac 1 N \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) \frac{\eps^k}{N^k}\right] &= \frac 1 {N^k} \E\left(\tilde w^k w (\bx - \bmu)^2\right) &= \E_\px\left(\tilde w^k (\bx - \bmu)^2\right)
+\end{align*}
+
+\noindent Summing the terms in the Taylor expansion yields
+
+\begin{align*}
+\sum_{k=0}^\infty (-1)^k \frac 1 {N^k} \E_\px\left(\tilde w^k (\bx - \bmu)^2\right) &= \E_\px\left[\sum_{k=0}^\infty (-1)^k \frac {\tilde w^k} {N^k} (\bx - \bmu)^2\right] &= \E_\px\left[\frac {(\bx - \bmu)^2}{1 + \frac{\tilde w}{N}}\right] \\
+\end{align*}
+
+\noindent This equals the true variance if either $N = \infty$ (asymptotically) or the weights are $\equiv 1$. As a sanity check, it also gives the correct value for $N = 1$. 
+
+Analysing the expression leads to the same result as before, just in a more precise way.
+
+\end{document}
