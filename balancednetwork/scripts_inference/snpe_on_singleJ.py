@@ -18,11 +18,11 @@ except:
 n_params = 1
 n_cores_to_use = 3
 
-ntrain = 200
+ntrain = 500
 n_minibatch = 100
-n_pilot_samples = 30
+n_pilot_samples = 20
 
-nrounds = 3
+nrounds = 2
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
 j_index = 0
@@ -33,7 +33,7 @@ param_name = 'w' + j_label
 
 m = BalancedNetwork(inference_param=param_name, dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
-p = dd.Uniform(lower=[0.01] * n_params, upper=[0.05] * n_params)
+p = dd.Uniform(lower=[0.5 * true_param[0]], upper=[1.5 * true_param[0]])
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 
@@ -46,13 +46,13 @@ stats_obs = s.calc(data[0])
 res = infer.SNPE(g, obs=stats_obs, n_components=1, pilot_samples=n_pilot_samples)
 
 # run with N samples
-out, trn_data = res.run(ntrain, nrounds, epochs=1000, minibatch=n_minibatch)
+out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=n_minibatch)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
 
 result_dict = dict(true_params=true_param, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                   posterior=posterior, out=out, trn_data=trn_data, prior=p)
+                   posterior=posterior, out=out, trn_data=trn_data, prior=p, posterior_list=posteriors)
 
 filename = '{}_snpe_J{}_r{}_ntrain{}'.format(time.time(), j_label, nrounds, ntrain).replace('.', '') + '.p'
 print(filename)
