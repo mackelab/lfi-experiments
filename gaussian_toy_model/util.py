@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from scipy.stats import multivariate_normal as mvn
+from scipy.special import gammaln
 from delfi.utils.progress import no_tqdm, progressbar
 
+from delfi.simulator.BaseSimulator import BaseSimulator
 from delfi.simulator.Gauss import Gauss
     
 def gauss_weights(params, stats, mu_y, Sig_y):
@@ -21,7 +23,7 @@ def gauss_weights_eps0(params, stats, mu_y, Sig_y):
     # Note: making use of the fact that covariances are zero for normal weights in SNPE/CDELFI MLE solutions
     
     x = -0.5 * (params-mu_y[1])**2 / Sig_y[1,1] # would like to use mvn.pdf, but that one freaks  
-    return np.exp( x.reshape(-1) )              # out for 1D problems with negative (co-)variance
+    return np.exp( x.reshape(-1) ) # out for 1D problems with negative (co-)variance
 
 
 def sel_gauss_implementation(eps2, thresh=1000): 
@@ -62,18 +64,19 @@ def get_weights(proposal_form, eta2, ksi2, eps2, x0, nu, stats, params, df=3, a=
     
     if proposal_form == 'normal':
         
-        eta2p = 1/(1/eta2 - 1/ksi2)
-        Sig_y = np.array([[eps2,0], [0,eta2p]])    
-        mu_y = np.array([ [x0[0]], [eta2/(eta2-ksi2)*nu]])
-
-        comp_weights =get_weights_fun(eps2, thresh=1000, proposal_form=proposal_form)
-        
-        normals = comp_weights(params, stats, mu_y, Sig_y)
+        proposal_pdf = mvn.pdf(x=params, mean=nu, cov=ksi2)
+        prior_pdf    = mvn.pdf(x=params, mean=0., cov=eta2)
+        normals = prior_pdf / proposal_pdf
+        if eps2 < 1000:
+            calibration_kernel_pdf = mvn.pdf(x=stats, mean=x0, cov=eps2)
+            normals *= calibration_kernel_pdf
         
     if proposal_form == 'studentT':
 
         exponent = -(df+1)/2 
         proposal_pdf = (1 + (params-nu)**2/(df*ksi2))**exponent
+        proposal_pdf *= np.exp(gammaln((df + 1) / 2)-gammaln(df / 2) - \
+            1/2 * np.log(df * np.pi) - 0.5 * np.log(ksi2)) 
         prior_pdf    = mvn.pdf(x=params, mean=0., cov=eta2)
         normals = prior_pdf / proposal_pdf
         if eps2 < 1000:
@@ -147,6 +150,18 @@ def gamma2(params, stats, normals, ahat=None, bhat=None):
     return gamma2hat
 
 
+def gamma2_bc(params, stats, normals, ahat=None, bhat=None):
+
+    """ bias-corrected ? """
+
+    ahat = alpha(params, stats, normals) if ahat is None else ahat
+    bhat = beta(params, stats, normals, ahat) if bhat is None else bhat
+
+    gamma2hat = (normals*(params - ahat - bhat * stats )**2).sum() 
+    
+    return gamma2hat
+
+
 def analytic_div(out, eta2, nus, ksi2s):
     """ analytic correction of onedimensional Gaussians for proposal priors"""
     # assumes true prior to have zero mean!
@@ -175,7 +190,7 @@ def analytic_div(out, eta2, nus, ksi2s):
 
         # divide by proposal
         P = P - 1/ksi2s[i]
-        Pm = Pm - nu/ksi2s[i]
+        Pm = Pm - nus[i]/ksi2s[i]
 
         out_[i,:,:] = np.vstack((Pm/P, 1/P)).T
 
@@ -183,7 +198,7 @@ def analytic_div(out, eta2, nus, ksi2s):
 
 
 def test_setting(out_snpe, n_params, N, sig2, eta2, eps2, x0, ksi2s, nus, 
-                 proposal_form, track_rp=False, df=None, marg=None, n_bins=50, if_plot=True):
+                 proposal_form, track_rp=False, df=None, marg=None, n_bins=50, if_plot=True,model='lin'):
 
     n_fits = out_snpe.shape[1]
 
@@ -240,7 +255,12 @@ def test_setting(out_snpe, n_params, N, sig2, eta2, eps2, x0, ksi2s, nus,
                     ppr = dd.Uniform(lower=a, upper=b, seed=seed)
                 else:
                     raise NotImplementedError
-                m = Gauss(dim=n_params, noise_cov=sig2, seed=seed)
+
+                if model=='lin':
+                    m = Gauss(dim=n_params, noise_cov=sig2, seed=seed)
+                elif model=='log':
+                    m = LogGauss(dim=n_params, noise_cov=sig2, seed=seed)
+
                 g = dg.Default(model=m, prior=ppr, summary=s)
 
 
@@ -303,3 +323,35 @@ def test_setting(out_snpe, n_params, N, sig2, eta2, eps2, x0, ksi2s, nus,
         plt.show()
 
     return out_snpe
+
+
+class LogGauss(BaseSimulator):
+    def __init__(self, dim=1, noise_cov=0.1, seed=None):
+        """Gauss simulator
+
+        Toy model that draws data from a distribution centered on theta with
+        fixed noise.
+
+        Parameters
+        ----------
+        dim : int
+            Number of dimensions of parameters
+        noise_cov : float
+            Covariance of noise on observations
+        seed : int or None
+            If set, randomness is seeded
+        """
+        super().__init__(dim_param=dim, seed=seed)
+        self.noise_cov = noise_cov*np.eye(dim)
+
+    @copy_ancestor_docstring
+    def gen_single(self, param):
+        # See BaseSimulator for docstring
+        param = np.asarray(param).reshape(-1)
+        assert param.ndim == 1
+        assert param.shape[0] == self.dim_param
+
+        sample = np.exp(dd.Gaussian(m=param, S=self.noise_cov,
+                             seed=self.gen_newseed()).gen(1))
+
+        return {'data': sample.reshape(-1)}
