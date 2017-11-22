@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -17,13 +18,15 @@ def batch_generator(dataset, batch_size=5):
 
 
 def gauss_pdf(y, mu, sigma, log=False):
-    result = -0.5*torch.log(2*np.pi*sigma**2) - 1/(2*sigma**2) * (y - mu)**2
+    # TODO: rethink torch.log
+    result = -0.5*torch.log(2*np.pi*sigma**2*Variable(torch.ones(1))) - 1/(2*sigma**2) * (y - mu)**2
     if log:
         return result
     else: 
         return torch.exp(result)
 
 def mdn_logloss(out_alpha, out_sigma, out_mu, y):
+    # TODO: learn sigma
     result = (gauss_pdf(y, out_mu, Variable(torch.ones((1)))) * out_alpha).squeeze()
     result = torch.log(result)
     return result
@@ -39,20 +42,31 @@ def mdn_kl(mps, sps, wdecay):
     return L
 
 
-def log_posterior(out_alpha, out_sigma, out_mu, y):
+def log_posterior(model, prior_mean, prior_var, theta, obs, frozen=True):
     # log L(θ)p(θ)
-    f  = mdn_logloss(out_alpha, out_sigma, out_mu, y)
-    f += gauss_pdf(y, prior_mu, prior_sigma).squeeze()
-    return f
+    x_param = nn.Parameter(torch.Tensor(theta))
+    y_var = Variable(torch.Tensor(obs))
+    (out_alpha, out_sigma, out_mu) = model(x_param, frozen=frozen)
+    lp  = mdn_logloss(out_alpha, out_sigma, out_mu, y_var)
+    lp += gauss_pdf(x_param, prior_mean, math.sqrt(prior_var), 
+                   log=True).squeeze()
+    return x_param, lp
 
-def al_loss_v1():
-    # C(θ) = E[log L(θ)p(θ)] + β VAR[log L(θ)p(θ)]
-    pass
+def al_loss(model, prior_mean, prior_var, theta, obs, beta=1., frozen=True):
+    # C(θ) = β E[log L(θ)p(θ)] + (1-β) VAR[log L(θ)p(θ)]
+    x_param, lp = log_posterior(model, prior_mean, prior_var, theta, obs, frozen)   
+    Ef = lp.mean()
+    Ef2 = (lp**2).mean()
+    E2f = Ef**2
+    C = - (1-beta) * Ef - beta * (Ef2 - E2f)
+    C.backward()
+    return C.data.numpy(), x_param.grad.data.numpy(), lp.data.numpy()
 
 
 class FullyConnectedLayer(nn.Module):
     def __init__(self, n_inputs, n_outputs, n_samples=9, 
                  sigma_prior=0.1, svi=True, activation=nn.Tanh()):
+        # TODO: make sure svi=False works
         super(FullyConnectedLayer, self).__init__()
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
@@ -72,9 +86,10 @@ class FullyConnectedLayer(nn.Module):
             
     def forward(self, X, sample=True, frozen=False, debug=False):
         """
-        In  : (n_batch, n_input) or (n_samples, n_batch, n_input)
-        Out : (n_samples, n_batch, n_outputs)
+        Input  : (n_batch, n_input) or (n_samples, n_batch, n_input)
+        Output : (n_samples, n_batch, n_outputs)
         """       
+        # TODO: make sure sample=False works
         if sample:
             X = X[None, :, :] if X.dim() == 2 else X
         if debug: print('In  : {}'.format(X.size()))
