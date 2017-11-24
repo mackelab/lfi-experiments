@@ -148,5 +148,6 @@ def load_data(filename, folder):
     return pickle.load(open(full_path, 'rb'))
 
 
-def save_figure(filename, folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/figures/'):
-    plt.savefig(os.path.join(folder, filename))
+def save_figure(filename, folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/figures/',
+                dpi=300):
+    plt.savefig(os.path.join(folder, filename), dpi=dpi)

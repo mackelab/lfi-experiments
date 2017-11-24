@@ -4,14 +4,21 @@ import os
 import pickle
 import time
 
-from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
-from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
-from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
-
+try:
+    from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
+    from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
+    from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
+except:
+    import sys
+    sys.path.append('../../../lfi-models')
+    from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
+    from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
+    from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 n_params = 1
 n_cores_to_use = 4
-ntrain = 10
+ntrain = 100
+n_pilot_samples = 20
 save_data = True
 
 
@@ -29,7 +36,7 @@ data = m.gen(true_params)
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.Basic(g, n_components=1, pilot_samples=50)
+res = infer.Basic(g, n_components=1, pilot_samples=n_pilot_samples)
 
 out, trn_data = res.run(ntrain, epochs=1000, minibatch=10)
 

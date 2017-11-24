@@ -12,11 +12,11 @@ from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGe
 n_params = 4
 n_cores_to_use = 4
 
-ntrain = 300
+ntrain = 500
 n_minibatch = 100
 n_pilot_samples = 30
 
-nrounds = 4
+nrounds = 2
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
 
@@ -34,16 +34,16 @@ data = m.gen(true_params)
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.SNPE(g, obs=stats_obs, n_components=3, pilot_samples=n_pilot_samples)
+res = infer.SNPE(g, obs=stats_obs, n_components=1, pilot_samples=n_pilot_samples)
 
 # run with N samples
-out, trn_data = res.run(ntrain, nrounds, epochs=1000, minibatch=n_minibatch)
+out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=1000, minibatch=n_minibatch)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
 
 result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                   posterior=posterior, out=out, trn_data=trn_data)
+                   posterior=posterior, out=out, trn_data=trn_data, posterior_list=posteriors)
 
 # set up a dict for saving the results
 if save_data and os.path.exists(path_to_save_folder):

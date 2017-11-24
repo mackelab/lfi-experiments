@@ -7,11 +7,11 @@ from balancednetwork.utils import *
 n_realizations = 1
 n_trials = 1
 
-np.random.seed(11)
+np.random.seed(1)
 
 # create simulation network
 net = Network()
-n = 1000
+n = 250
 NE = 4 * n
 NI = 1 * n
 N = NE + NI
@@ -19,7 +19,7 @@ N = NE + NI
 # get the scaling factor for weights in case the network size is different
 alpha = get_scaling_factor_for_weights(NE, NI)
 
-simulation_time = 5 * second
+simulation_time = .5 * second
 vt = 1
 vr = 0
 
@@ -27,11 +27,11 @@ vr = 0
 C = 80
 n_clusters = int(NE / C)
 # cluster coef
-ree = 2.5
+ree = 3.5
 
 # average ee sparseness
 p_ee = 0.2
-cluster_weight_factor = 1.9
+cluster_weight_factor = 2.
 p_in, p_out = get_cluster_connection_probs(ree, n_clusters, p_ee)
 
 tau_e = 15 * ms
@@ -144,8 +144,13 @@ for realization in range(n_realizations):
     MIe = StateMonitor(P, 'I_e', record=example_neuron)
     MIi = StateMonitor(P, 'I_i', record=example_neuron)
 
-    sme = SpikeMonitor(Pe[:400])
+    sme = SpikeMonitor(Pe)
     smi = SpikeMonitor(Pi)
+
+    spiketimedict_e = sme.getspiketimes()
+    spiketimedict_i = smi.getspiketimes()
+    spiketimedict = {'{}'.format(k): v.tolist() for k, v in spiketimedict_e.items()}
+    
 
     net.add([Mv, MIe, MIi, sme, smi])
 
@@ -174,14 +179,19 @@ data_filename = '{}ree{}_dur{}_brain1'.format(time_str, ree, simulation_time).re
 
 # save results to disk
 save_data(data=round_dict, filename=data_filename,
-          folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/data/')
+          folder='/Users/Jan/Dropbox/Master/mackelab/code/lfi-experiments/balancednetwork/data/')
 
 # #
-plt.figure(figsize=(15, 5))
+plt.figure(figsize=(15, 8))
+plt.subplot(211)
 raster_plot(sme, markersize=4)
-#raster_plot(smi, markersize=2)
 plt.title('Spike trains of E neurons, $R_{ee}$=' + '{}'.format(ree))
-spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.pdf'
+
+plt.subplot(212)
+raster_plot(smi, markersize=4)
+
+spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.png'
 plt.tight_layout()
-save_figure(filename=spiketrain_filename)
+save_figure(filename=spiketrain_filename, dpi=400,
+            folder='/Users/Jan/Dropbox/Master/mackelab/code/lfi-experiments/balancednetwork/figures/')
 plt.show()

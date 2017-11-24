@@ -1,0 +1,205 @@
+\documentclass[10pt,english]{article}
+%\special{papersize=210mm,297mm}
+\usepackage[a4paper,left=20mm,right=20mm, top=2.5cm, bottom=2.5cm]{geometry}
+\usepackage{epsfig}
+\usepackage{babel}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{units}
+\usepackage{pstricks}
+\usepackage{color}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdfborder={0 0 0},
+  	        colorlinks=true,% hyperlinks will be coloured
+  	        linkcolor=blue,
+            breaklinks=true}
+\usepackage{bm}
+\usepackage{xcolor}
+\bibliographystyle{plain}
+\usepackage{amsmath,amssymb}
+
+\setlength{\parindent}{2em}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\M}{\mathbold{M}}
+\newcommand{\KL}{D_{\text{KL}}}
+
+\newcommand{\mathbold}[1]{\ensuremath{\boldsymbol{\mathbf{#1}}}}
+
+\newcommand{\btheta}{\mathbold{\theta}}
+\newcommand{\bs}{\mathbold{s}}
+\newcommand{\bx}{\mathbold{x}}
+\newcommand{\bxo}{\mathbold{x}_o}
+\newcommand{\bphi}{\mathbold{\phi}}
+\newcommand{\bpsi}{\mathbold{\psi}}
+\newcommand{\bepsilon}{\mathbold{\epsilon}}
+\newcommand{\bzero}{\mathbold{0}}
+\newcommand{\beye}{\mathbold{I}}
+\newcommand{\btau}{\mathbold{\tau}}
+
+\newcommand{\bmu}{\mathbold{\mu}}
+\newcommand{\bLambda}{\mathbold{\Lambda}}
+\newcommand{\blambda}{\mathbold{\lambda}}
+\newcommand{\balpha}{\mathbold{\alpha}}
+\newcommand{\bSigma}{\mathbold{\Sigma}}
+
+\newcommand{\qphi}{q_{\bphi}(\btheta|\bx)}
+\newcommand{\qphin}{q_{\bphi}(\btheta_n|\bx_n)}
+\newcommand{\qsvi}{\tilde{q}}
+
+\newcommand{\ptilde}{{\tilde{p}(\bx)}}
+\newcommand{\ptilden}{{\tilde{p}(\bx_n)}}
+\newcommand{\px}{{p(\bx)}}
+\newcommand{\pxn}{{p(\bx_n)}}
+
+\newcommand{\likelihood}{p(\bx|\btheta)}
+\newcommand{\likelihoodn}{p(\bx|\btheta_n)}
+
+\newcommand{\approxposterior}{\hat{p}(\btheta|\bx)}
+\newcommand{\approxposteriorxo}{\hat{p}(\btheta|\bx = \bxo)}
+
+\newcommand{\loss}{\mathcal{L}}
+\newcommand{\lossphi}{\mathcal{L}(\bphi)}
+
+\newcommand{\K}{K_{\tau}}
+
+
+\def\eps{\varepsilon}
+
+\title{Variance Estimation using Proposal Priors}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+We fix our prior $\px$ with variance $\sigma^2$ and our proposal prior $\ptilde$. Sampling independent samples $\bx_n$ from $\ptilde$, the MLE estimate for the variance of $\px$ is given by
+
+\begin{align}\label{eq:master}
+\frac{\sum_{n=1}^N w_n (\bx_n - \bmu)^2 }{\sum_n w_n} 
+\end{align}
+
+
+\noindent where the are the importance weights. We write
+
+\[ \sum_{n=1}^N w_n = N + \sum_{n=1}^N (w_n - 1) =: N + \sum_{n=1} \eps_n =: N + \eps \]
+
+
+\noindent Here, $\eps$ is a random variable with variance $\approx N$. For large enough $N$, the ratio $\frac \eps N$ (the average deviation around the mean) is likely to be small and we can perform a Taylor expansion of Eq. \ref{eq:master} with respect to $\eps$:
+
+\begin{align*}
+\frac{\sum_{n=1}^N w_n (\bx_n - \bmu)^2 }{N + \eps} &= \frac 1 N \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) \left (1 - \frac \eps N + \frac {\eps^2} {N^2} - \frac {\eps^3} {N^3} + \ldots \right)
+\end{align*}
+
+
+\noindent We now focus on the linear term. A simple calculation yields:
+
+\begin{align*}
+\frac 1 N \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) \frac \eps N &= \frac 1 {N^2} \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) \left(\sum_{n=1}^N (w_n - 1) \right) \\ 
+&=\frac 1 {N^2} \sum_{n\neq m=1}^N w_n w_m (\bx_n - \bmu)^2 + \frac 1 {N^2} \sum_{n=1}^N w_n^2 (\bx_n - \bmu)^2 - \frac 1 N \sum_{n=1}^N w_n (\bx_n - \bmu)^2
+\end{align*}
+
+
+\noindent Thus we get
+
+\begin{align*}
+ \frac 1 N \left(\sum_{n=1}^N w_n (\bx_n - \bmu)^2\right) (1 - \frac \eps N) &=  \frac 2 N \sum_{n=1}^N w_n (\bx_n - \bmu)^2 - \frac 1 {N^2} \sum_{n\neq m=1}^N w_n w_m (\bx_n - \bmu)^2 - \frac 1 {N^2} \sum_{n=1}^N w_n^2 (\bx_n - \bmu)^2
+\end{align*}
+
+\noindent This is a first-order (in $\frac \eps N$) approximation of Eq. \ref{eq:master}. Keeping in mind that the weights are functions of the (independent) random variables $\bx_n$, the expected value is equal to
+
+\begin{align*}
+2 \E_\px((\bx - \bmu)^2) &- \frac {N-1}{N} \E_\px((\bx - \bmu)^2) - \frac 1 N \E_\px(w(\bx - \bmu)^2) \\
+&= \E_\px((\bx - \bmu)^2) + \frac 1 N \left(E_\px((\bx - \bmu)^2) - \E_\px(w(\bx - \bmu)^2)\right)
+\end{align*} 
+
+\noindent where $\E_\px$ denotes the expected value with respect to the prior $\px$. We read off from this that our estimator has a bias of approximately 
+
+\[ \frac 1 {N} \left(E_\px(\bx^2) - E_\px(w\bx^2)\right) \]
+
+\noindent This is consistent with the fact that the bias should disappear as $N \rightarrow \infty$, or if $w \equiv 1$, ie. $\px = \ptilde$.
+
+A note on the validity of the Taylor expansion: $\eps$ has variance $\frac 1 N$. By the Chebyshev inequality, $\eps$ will be very small with an overwhelming probability, so the Taylor expansion can be applied. In any case, this is just an asymptotic estimate of the bias.
+
+We apply this to the model where $\px \sim \mathcal{N}(0, \sigma^2)$ and $\ptilde \sim \mathcal{N}(0, \eta^2)$, with $\eta < \sigma$. Then we have
+
+\[ w(\bx) = \frac{\eta}{\sigma} e^{\frac d 2 \bx^2} \]
+
+\noindent where we let $d = \frac{1}{\eta^2} - \frac{1}{\sigma^2} > 0$. From the above expression we get that our estimator is biased towards underestimating the correct variance if $\E_\px(w\bx^2) > \E_\px(\bx^2)$, which is the case for our toy problem.
+
+
+We now perform the full Taylor expansion, considering all higher-order terms. For this it will prove convenient to define the shifted weights $\tilde w_n = w_n - 1$. It follows that
+
+\begin{align} \label{eq:wshifttrick}
+\eps^k &= \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \nonumber \\
+\sum_{n=1}^N w_n (\bx_n - \bmu)^2 &= \sum_{n=1}^N \tilde w_n (\bx_n - \bmu)^2 + \sum_{n=1}^N (\bx_n - \bmu)^2
+\end{align}
+
+\noindent Attempting to calculate the expected values of the terms, we remark that the $\tilde w_n$ are independent random variables, that $\tilde w_n$ is independent of $\bx_m$ for $n \neq m$, and that the $\tilde w_n$ have mean $0$. Using the formula $\E(XY) = \E(X)\E(Y)$ for independent random variables $X, Y$ we get the following, where a hat over a variable indicates that it should be omitted:
+
+\begin{align*}
+\E\left[(\bx_n - \bmu)^2\left( \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \right)\right] &= 
+\E\left[(\bx_n - \bmu)^2\left( \sum_{e_1 + \ldots + e_N=k} \binom {k}{e_1,\ldots,e_N} \tilde w_1^{e_1}  \ldots \tilde w_N^{e_N} \right)\right] \\
+&= \E\left[(\bx_n - \bmu)^2\left( \sum_{j=0}^k \sum_{\substack{e_1 + \ldots + e_N=k \\ e_n=j}} \binom{k}{j} \binom {k-j}{e_1,\ldots,\widehat {e_n},\ldots,e_N} \tilde w_1^{e_1} \ldots \tilde w_N^{e_N} \right)\right] \\
+&= \sum_{j=0}^k \binom{k}{j} \E\left[ \tilde w_n^j (\bx_n - \bmu)^2 \right] \\
+&\left(\sum_{\substack{e_1 + \ldots + e_N=k \\ e_n=j}} \binom {k-j}{e_1,\ldots,\widehat {e_n},\ldots,e_N} \E\left(\tilde w_1^{e_1}\right) \ldots \widehat{\E\left(\tilde w_n^{e_n}\right)} \ldots \E\left(\tilde w_N^{e_N}\right) \right) \\
+&= \sum_{j=0}^k \binom{k}{j} \E\left[ \tilde w_n^j (\bx_n - \bmu)^2 \right] \\
+& \left(\sum_{\substack{e_1 + \ldots + e_N=k \\ e_n=j}} \binom {k-j}{e_1,\ldots,\widehat {e_n},\ldots,e_N} \M_{\tilde w}^{e_1} \ldots \widehat{ \M_{\tilde w}^{e_n} } \ldots  \M_{\tilde w}^{e_N} \right) \\
+\end{align*}
+
+\noindent Here $\M_{\tilde w}^a := \E[\tilde w^a]$ denots the $a$-th moment of $\tilde w$. To simplify this expression we will make use of the characteristic function $\phi_{\tilde w}(t) := \E\left(e^{t\tilde w}\right)$. Recall that
+
+\[ \M_{\tilde w}^a = (-i)^a \phi_{\tilde w}^{(a)}(0) \]
+
+\noindent This yields
+
+\begin{align*}
+\ldots &= \sum_{j=0}^k \binom{k}{j} \E\left[ \tilde w_n^j (\bx_n - \bmu)^2 \right] \left(\sum_{\substack{e_1 + \ldots + e_N=k \\ e_n=j}} \binom {k-j}{e_1,\ldots,\widehat {e_n},\ldots,e_N} (-i)^{e_1} \phi_{\tilde w}^{(e_1)}(0) \ldots \widehat{(-i)^{e_n} \phi_{\tilde w}^{(e_n)}(0)} \ldots (-i)^{e_N} \phi_{\tilde w}^{(e_N)}(0) \right) \\
+&= \sum_{j=0}^k \binom{k}{j} \E\left[ \tilde w_n^j (\bx_n - \bmu)^2 \right] (-i)^{k-j} (\phi_{\tilde w}^{N-1})^{(k-j)}
+\end{align*}
+
+Let $\M_{\tilde w_1 + \ldots + \tilde w_{N-1}}^a$ denote the $a$-th moment of the sum of $N-1$ independent $\tilde w$-distributed random variables. The above can be written as:
+
+\begin{align*}
+\E\left[(\bx_n - \bmu)^2\left( \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \right)\right]
+&= \sum_{j=0}^k \binom{k}{j} \E\left[ \tilde w^j (\bx - \bmu)^2 \right]\M_{\tilde w_1 + \ldots + \tilde w_{N-1}}^{k-j} \\
+\end{align*}
+
+\noindent Doing the same with the other term in \ref{eq:wshifttrick} gives
+
+\begin{align*}
+\E\left[\tilde w_n (\bx_n - \bmu)^2\left( \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \right)\right]
+&= \sum_{j=0}^k \binom{k}{j} \E\left[ \tilde w^{j+1} (\bx - \bmu)^2 \right] \M_{\tilde w_1 + \ldots + \tilde w_{N-1}}^{k-j} \\
+\end{align*}
+
+\noindent Adding the two we get:
+
+\begin{align*}
+\E\left[w_n (\bx_n - \bmu)^2\left( \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \right)\right]
+&= \sum_{j=0}^k \binom{k}{j} \E_\px \left[ \tilde w^j (\bx - \bmu)^2 \right] \M_{\tilde w_1 + \ldots + \tilde w_{N-1}}^{k-j} \\
+\end{align*}
+
+\noindent Now recall that $\sigma^2 < \infty$. Define the probability distribution $q(x) = \sigma^{-2} (x - \mu)^2 \px$. The above expression equals:
+
+\begin{align*}
+\E\left[w_n (\bx_n - \bmu)^2\left( \sum_{n_1,\ldots,n_k=1}^N \tilde w_{n_1} \ldots \tilde w_{n_k} \right)\right]
+&= \sigma^2 \sum_{j=0}^k \binom{k}{j} \M_{\tilde w, q(x)}^j \M_{\tilde w_1 + \ldots + \tilde w_{N-1}}^{k-j} \\
+\end{align*}
+
+\noindent This is the $k$-th moment of a random variable $Y$ which is the sum of $N - 1$ $\tilde w$-distributed random variables and the random variable $\tilde w(X)$, with $X \sim \sigma^{-2} (\bx - \mu)^2 \px$. We thus get an asymptotic expansion of the expectation using the higher moments of $Y$. For $k \leq 2$ the moments are easy to calculate because we have no cross terms; the first two we have computed above:
+
+\begin{align*}
+T_0 &= \E_\px\left((\bx - \mu)^2 \right) \\
+T_1 &= -\frac 1 N \E_\px\left(\tilde w(\bx - \mu)^2 \right) \\
+T_2 &= \frac {N - 1}{N^2} \E(\tilde w^2) + \E_\px\left(\tilde w^2 (\bx - \mu)^2 \right)
+\end{align*}
+
+\noindent The second-order term hints at the fact that, if the $\tilde w$ are not bounded, the series we derived will generally not converge for any finite $N$, with the higher-order terms blowing up. An example is our Gaussian toy model, where for $\eta < \sigma$ we will observe a blowup after finitely many terms.
+
+If the $\tilde w$ are bounded above by some $C > 0$, then $\abs{Y} \leq NC$. For large $N$, if $C > N$ we will find that the series does converge if $X$
+
+My theory: unbounded importance weights can make all sorts of things go wrong.
+
+\end{document}
