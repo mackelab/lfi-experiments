@@ -10,7 +10,7 @@ try:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 except:
     import sys
-    sys.path.append('../../../lfimodels')
+    sys.path.append('../../../lfi-models')
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
@@ -20,20 +20,20 @@ n_cores_to_use = 3
 
 ntrain = 500
 n_minibatch = 100
-n_pilot_samples = 20
+n_pilot_samples = 50
 
-nrounds = 2
+nrounds = 3
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
-j_index = 0
+j_index = 3
 true_params = [0.024, 0.045, 0.014, 0.057]  # params from the paper
 j_label = ['ee', 'ei', 'ie', 'ii'][j_index]
 true_param = [true_params[j_index]]
 param_name = 'w' + j_label
 
 m = BalancedNetwork(inference_param=param_name, dim=n_params, first_port=9000,
-                    verbose=True, n_servers=n_cores_to_use, duration=3.)
-p = dd.Uniform(lower=[0.5 * true_param[0]], upper=[1.5 * true_param[0]])
+                    verbose=True, n_servers=n_cores_to_use, duration=3., parallel=True)
+p = dd.Uniform(lower=[0.5 * true_param[0]], upper=[1.3 * true_param[0]])
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 

@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -17,15 +18,16 @@ def batch_generator(dataset, batch_size=5):
 
 
 def gauss_pdf(y, mu, sigma, log=False):
-    result = -0.5*torch.log(2*np.pi*sigma**2) - 1/(2*sigma**2) * (y - mu)**2
+    # TODO: rethink torch.log
+    result = -0.5*torch.log(2*np.pi*sigma**2*Variable(torch.ones(1))) - 1/(2*sigma**2) * (y - mu)**2
     if log:
         return result
     else: 
         return torch.exp(result)
 
 def mdn_logloss(out_alpha, out_sigma, out_mu, y):
-    result = (gauss_pdf(y, out_mu, Variable(torch.ones((1)))) * out_alpha).squeeze()
-    result = torch.log(result)
+    result = (gauss_pdf(y, out_mu, out_sigma, log=True) * out_alpha).squeeze()
+    #result = torch.log(result)
     return result
 
 def mdn_kl(mps, sps, wdecay):
@@ -39,20 +41,29 @@ def mdn_kl(mps, sps, wdecay):
     return L
 
 
-def log_posterior(out_alpha, out_sigma, out_mu, y):
-    # log L(θ)p(θ)
-    f  = mdn_logloss(out_alpha, out_sigma, out_mu, y)
-    f += gauss_pdf(y, prior_mu, prior_sigma).squeeze()
-    return f
-
-def al_loss_v1():
-    # C(θ) = E[log L(θ)p(θ)] + β VAR[log L(θ)p(θ)]
-    pass
+def al_loss(x_param, obs, model, prior_mean, prior_var, beta=1., frozen=True):
+    # C(θ) = β E[log L(θ)p(θ)] + (1-β) VAR[log L(θ)p(θ)]
+    y_var = Variable(torch.Tensor(obs))
+    (out_alpha, out_sigma, out_mu) = model(x_param, frozen=frozen)
+    lp = mdn_logloss(out_alpha, out_sigma, out_mu, y_var)
+    
+    if prior_var > 0.:
+        lp += gauss_pdf(x_param, prior_mean, math.sqrt(prior_var), 
+                        log=True).squeeze()
+    
+    Ef = lp.mean()
+    Ef2 = (lp**2).mean()
+    E2f = Ef**2
+    
+    C = - (1-beta) * Ef - beta * (Ef2 - E2f)
+    
+    return C, lp
 
 
 class FullyConnectedLayer(nn.Module):
     def __init__(self, n_inputs, n_outputs, n_samples=9, 
                  sigma_prior=0.1, svi=True, activation=nn.Tanh()):
+        # TODO: make sure svi=False works
         super(FullyConnectedLayer, self).__init__()
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
@@ -72,9 +83,10 @@ class FullyConnectedLayer(nn.Module):
             
     def forward(self, X, sample=True, frozen=False, debug=False):
         """
-        In  : (n_batch, n_input) or (n_samples, n_batch, n_input)
-        Out : (n_samples, n_batch, n_outputs)
+        Input  : (n_batch, n_input) or (n_samples, n_batch, n_input)
+        Output : (n_samples, n_batch, n_outputs)
         """       
+        # TODO: make sure sample=False works
         if sample:
             X = X[None, :, :] if X.dim() == 2 else X
         if debug: print('In  : {}'.format(X.size()))
@@ -155,3 +167,62 @@ class MDN(nn.Module):
             if '_mu' in k:
                 output.append(v)
         return output
+    
+
+def train(X, Y, model, n_epochs=500, n_minibatch=10):
+    N = len(X)
+    dataset_train = [(x, y) for x, y in zip(X, Y)]
+
+    optim = torch.optim.Adam(model.parameters(), lr=0.01)
+
+    for epoch in range(n_epochs): 
+        bgen = batch_generator(dataset_train, n_minibatch)
+
+        for j, (x_batch, y_batch) in enumerate(bgen):
+            x_var = Variable(torch.Tensor(x_batch))
+            y_var = Variable(torch.Tensor(y_batch))
+                                                            
+            (out_alpha, out_sigma, out_mu) = model(x_var)
+            
+            if model.svi:
+                y_var = y_var[None, :, :].expand(model.n_samples, x_var.size()[0], 1).contiguous().view(-1, 1)
+            loss = -torch.mean(mdn_logloss(out_alpha, out_sigma, out_mu, y_var))
+            loss += 1/N*mdn_kl(model.mu, model.logsigma, 0.01)
+            
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+
+        if (epoch + 1) % 50 == 0:
+            print("[epoch %04d] loss: %.4f" % (epoch + 1, loss.data[0]))
+
+def optimize(loss_fun, theta_init, maxiter=100, verbose=False):
+    """
+    loss_fun : function
+        Takes a single arg for evaluation. Returns value and grad as first and second output
+    """
+    alpha = 0.1
+    done = False
+    ti = theta_init
+    Lo = np.inf
+    i = 0
+    
+    if verbose:
+        pbar = tqdm()
+    
+    while not done and i < maxiter:
+        out = loss_fun(ti)
+        L = -out[0].squeeze()
+        g = -out[1].squeeze()
+        assert not np.isinf(g)
+        assert not np.isnan(g)
+        
+        ti -= alpha * g
+        if np.abs(Lo - L) < 1e-6 * Lo + 1e-6:
+            done = True
+        Lo = L
+        i += 1
+        
+        if verbose:
+            pbar.update()
+    return ti
