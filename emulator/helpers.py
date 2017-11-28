@@ -51,11 +51,17 @@ def al_loss(x_param, obs, model, prior_mean, prior_var, beta=1., frozen=True):
         lp += gauss_pdf(x_param, prior_mean, math.sqrt(prior_var), 
                         log=True).squeeze()
     
-    Ef = lp.mean()
-    Ef2 = (lp**2).mean()
+    lfun = torch.exp(lp)
+    
+    Ef = lfun.mean()
+    Ef2 = (lfun**2).mean()
     E2f = Ef**2
     
-    C = - (1-beta) * Ef - beta * (Ef2 - E2f)
+    Mean = Ef
+    Variance = Ef2 - E2f
+    Normalizer = Mean + Variance
+    
+    C = beta*Mean/Normalizer + (1-beta)*Variance/Normalizer
     
     return C, lp
 
@@ -182,7 +188,7 @@ def train(X, Y, model, n_epochs=500, n_minibatch=10):
             x_var = Variable(torch.Tensor(x_batch))
             y_var = Variable(torch.Tensor(y_batch))
                                                             
-            (out_alpha, out_sigma, out_mu) = model(x_var)
+            (out_alpha, out_sigma, out_mu) = model(x_var, frozen=False)
             
             if model.svi:
                 y_var = y_var[None, :, :].expand(model.n_samples, x_var.size()[0], 1).contiguous().view(-1, 1)
