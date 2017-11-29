@@ -16,9 +16,10 @@ except:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 n_params = 1
-n_cores_to_use = 2
+n_cores_to_use = 8
 ntrain = 500
-nrounds = 3
+n_minibatch = 100
+nrounds = 5
 n_pilot_samples = 50
 save_data = True
 
@@ -41,7 +42,7 @@ stats_obs = s.calc(data[0])
 res = infer.SNPE(g, obs=stats_obs, n_components=1, pilot_samples=n_pilot_samples, svi=True)
 
 # run with N samples
-out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=100)
+out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=n_minibatch, round_cl=3)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)

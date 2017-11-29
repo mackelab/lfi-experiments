@@ -16,16 +16,19 @@ except:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 n_params = 1
-n_cores_to_use = 3
+n_cores_to_use = 8
 
 ntrain = 500
 n_minibatch = 100
 n_pilot_samples = 50
 
-nrounds = 3
+nrounds = 5
+round_cl = 3
+
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
-j_index = 3
+
+j_index = 0
 true_params = [0.024, 0.045, 0.014, 0.057]  # params from the paper
 j_label = ['ee', 'ei', 'ie', 'ii'][j_index]
 true_param = [true_params[j_index]]
@@ -46,7 +49,7 @@ stats_obs = s.calc(data[0])
 res = infer.SNPE(g, obs=stats_obs, n_components=1, pilot_samples=n_pilot_samples)
 
 # run with N samples
-out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=n_minibatch)
+out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=n_minibatch, round_cl=round_cl)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
