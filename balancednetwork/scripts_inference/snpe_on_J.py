@@ -20,7 +20,7 @@ nrounds = 2
 save_data = True
 path_to_save_folder = '../data/'  # has to exist on your local path
 
-m = BalancedNetwork(dim=n_params, first_port=9000,
+m = BalancedNetwork(inference_params=['wxy'], dim=n_params, first_port=9000,
                     verbose=True, n_servers=n_cores_to_use, duration=3.)
 p = dd.Uniform(lower=[0.01] * n_params, upper=[0.1] * n_params)
 s = BalancedNetworkStats(n_workers=n_cores_to_use)

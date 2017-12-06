@@ -36,14 +36,14 @@ stats_obs = s.calc(data[0])
 res = infer.Basic(g, n_components=3, pilot_samples=n_pilot_samples)
 
 # run with N samples
-out, trn_data = res.run(ntrain, epochs=1000, minibatch=n_minibatch)
+out, trn_data, posteriors = res.run(ntrain, epochs=1000, minibatch=n_minibatch)
 
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
 
 nrounds = 1
 result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                   posterior=posterior, out=out, trn_data=trn_data)
+                   posterior=posterior, out=out, trn_data=trn_data, prior=p, posterior_list=posteriors)
 
 # set up a dict for saving the results
 if save_data and os.path.exists(path_to_save_folder):
