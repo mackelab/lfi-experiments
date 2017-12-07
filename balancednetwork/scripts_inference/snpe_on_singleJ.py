@@ -4,6 +4,8 @@ import os
 import pickle
 import time
 
+from utils import save_results
+
 try:
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats, Identity
@@ -30,7 +32,7 @@ save_data = True
 # if True, calculates the summary stats on the fly to save memory
 stats_onthefly = True
 
-path_to_save_folder = '../data/'  # has to exist on your local path
+path_to_save_folder = '../results/'  # has to exist on your local path
 
 j_index = 0
 true_params = [0.024, 0.045, 0.014, 0.057]  # params from the paper
@@ -65,19 +67,17 @@ posterior = res.predict(stats_obs)
 result_dict = dict(true_params=true_param, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
                    posterior=posterior, out=out, trn_data=trn_data, prior=p, posterior_list=posteriors)
 
-filename = '{}_snpe_J{}_r{}_ntrain{}'.format(time.time(), j_label, nrounds, ntrain).replace('.', '') + '.p'
-print(filename)
+simulation_name = '{}_snpe_J{}_r{}_n{}_rcl{}'.format(time.time(), j_label, nrounds, ntrain, round_cl).replace('.', '')
 
-# set up a dict for saving the results
-if save_data and os.path.exists(path_to_save_folder):
+# save the results
+if save_data:
+    path_to_file = save_results(result_dict, simulation_name, path_to_save_folder)
+    print(path_to_file)
 
-    filepath = os.path.join(path_to_save_folder, filename)
+# extract the posterior
+n_components = len(posterior.a)
+means = [posterior.xs[c].m for c in range(n_components)]
+Ss = [posterior.xs[c].S for c in range(n_components)]
 
-    with open(filepath, 'wb') as handle:
-        pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-elif save_data:
-    print('Path does not exist: {} saving in .'.format(path_to_save_folder))
-
-    with open(filename, 'wb') as handle:
-        pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+print('Predicited: {} +- {}'.format(means, Ss))
+print('True: {}'.format(true_param))

@@ -151,3 +151,33 @@ def load_data(filename, folder):
 def save_figure(filename, folder='/Users/Jan/Dropbox/Master/mackelab/code/balanced_clustered_network/figures/',
                 dpi=300):
     plt.savefig(os.path.join(folder, filename), dpi=dpi)
+
+
+def save_results(result_dict, simulation_name, path_to_save_folder):
+    # set the name of the folder
+    folder_name = simulation_name
+    # set filename
+    file_name = simulation_name + '.p'
+
+    if os.path.exists(path_to_save_folder):
+
+        os.mkdir(os.path.join(path_to_save_folder, folder_name))
+
+        path_to_file = os.path.join(path_to_save_folder, folder_name, file_name)
+
+        with open(path_to_file, 'wb') as handle:
+            pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    else:
+        print('Path does not exist: {} saving in .'.format(path_to_save_folder))
+
+        # create a directory in the current directory
+        cwd = os.getcwd()
+        os.mkdir(os.path.join(cwd, folder_name))
+
+        path_to_file = os.path.join(cwd, folder_name, file_name)
+
+        with open(path_to_file, 'wb') as handle:
+            pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    return path_to_file

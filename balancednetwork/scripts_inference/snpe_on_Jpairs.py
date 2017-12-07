@@ -3,6 +3,7 @@ import delfi.inference as infer
 import os
 import pickle
 import time
+from utils import save_results
 
 try:
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
@@ -18,19 +19,19 @@ except:
 n_params = 2
 n_cores_to_use = 4
 
-ntrain = 4
-n_minibatch = 2
-n_pilot_samples = 0
+ntrain = 1000
+n_minibatch = 100
+n_pilot_samples = 100
 
-nrounds = 1
+nrounds = 5
 round_cl = 3
 
-save_data = False
+save_data = True
 
 # if True, calculates the summary stats on the fly to save memory
 stats_onthefly = True
 
-path_to_save_folder = '../data/'  # has to exist on your local path
+path_to_save_folder = '../results/'  # has to exist on your local path
 
 true_params = [0.024, 0.045, 0.014, 0.057]  # params from the paper
 
@@ -40,13 +41,10 @@ j_labels = [['ee', 'ei', 'ie', 'ii'][j_index] for j_index in j_indices]
 true_params = [true_params[j_index] for j_index in j_indices]
 param_names = ''
 param_names = [param_names + 'w' + j_label for j_label in j_labels]
-print(param_names)
-
-
 
 s = Identity() if stats_onthefly else BalancedNetworkStats(n_workers=n_cores_to_use)
 
-m = BalancedNetwork(inference_params=param_names, dim=n_params, first_port=9000,
+m = BalancedNetwork(inference_params=param_names, dim=n_params, first_port=8100,
                     verbose=True, n_servers=n_cores_to_use, duration=.5, parallel=True, calculate_stats=stats_onthefly)
 
 p = dd.Uniform(lower=[0.5 * true_param for true_param in true_params],
@@ -72,19 +70,18 @@ posterior = res.predict(stats_obs)
 result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
                    posterior=posterior, out=out, trn_data=trn_data, prior=p, posterior_list=posteriors)
 
-filename = '{}_snpe_J{}_r{}_ntrain{}'.format(time.time(), ''.join(j_labels), nrounds, ntrain).replace('.', '') + '.p'
-print(filename)
+simulation_name = '{}_snpe_J{}_r{}_n{}_rcl{}'.format(time.time(), ''.join(j_labels), nrounds,
+                                                     ntrain, round_cl).replace('.', '')
 
-# set up a dict for saving the results
-if save_data and os.path.exists(path_to_save_folder):
+# save the results
+if save_data:
+    path_to_file = save_results(result_dict, simulation_name, path_to_save_folder)
+    print(path_to_file)
 
-    filepath = os.path.join(path_to_save_folder, filename)
+# extract the posterior
+n_components = len(posterior.a)
+means = [posterior.xs[c].m for c in range(n_components)]
+Ss = [posterior.xs[c].S for c in range(n_components)]
 
-    with open(filepath, 'wb') as handle:
-        pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-elif save_data:
-    print('Path does not exist: {} saving in .'.format(path_to_save_folder))
-
-    with open(filename, 'wb') as handle:
-        pickle.dump(result_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+print('Predicited: {} +- {}'.format(means, Ss))
+print('True: {}'.format(true_params))
