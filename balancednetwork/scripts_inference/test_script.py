@@ -3,15 +3,17 @@ import delfi.inference as infer
 import os
 import pickle
 import time
-from utils import save_results
 
 try:
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats, Identity
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
+    from utils import save_results
 except:
     import sys
     sys.path.append('../../../lfi-models')
+    sys.path.append('../')
+    from utils import save_results
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats, Identity
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
@@ -25,7 +27,7 @@ round_cl = 3
 
 true_ree = 2.5
 
-m = BalancedNetwork(['ree'], dim=1, first_port=8100,
+m = BalancedNetwork(['ree'], dim=1, first_port=8600,
                     verbose=True, n_servers=n_cores_to_use, duration=.5, parallel=True)
 p = dd.Uniform(lower=[0.5 * true_ree], upper=[1.5 * true_ree])
 s = BalancedNetworkStats(n_workers=n_cores_to_use)
