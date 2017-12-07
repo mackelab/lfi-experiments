@@ -4,15 +4,16 @@ import os
 import pickle
 import time
 
-from utils import save_results
-
 try:
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats, Identity
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
+    from utils import save_results
 except:
     import sys
     sys.path.append('../../../lfi-models')
+    sys.path.append('../')
+    from utils import save_results
     from lfimodels.balancednetwork.BalancedNetworkSimulator import BalancedNetwork
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats, Identity
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
