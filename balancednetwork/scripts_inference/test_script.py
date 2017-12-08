@@ -54,7 +54,7 @@ path_to_save_folder = '../results/'  # has to exist on your local path
 result_dict = dict(true_params=true_params, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
                    posterior=posterior, out=out, trn_data=trn_data, prior=p, posterior_list=posteriors)
 
-simulation_name = '{}_snpe_ree_r{}_n{}_rcl{}'.format(time.time(), nrounds, ntrain, round_cl).replace('.', '')
+simulation_name = '{}_snpe_ree_r{}_n{}_rcl{}_TEST'.format(time.time(), nrounds, ntrain, round_cl).replace('.', '')
 
 path_to_file = save_results(result_dict, simulation_name, path_to_save_folder)
 

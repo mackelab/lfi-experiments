@@ -19,14 +19,14 @@ except:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 n_params = 1
-n_cores_to_use = 4
+n_cores_to_use = 30
 
-ntrain = 1000
+ntrain = 500
 n_minibatch = 100
-n_pilot_samples = 50
+n_pilot_samples = 100
 
-nrounds = 5
-round_cl = 3
+nrounds = 10
+round_cl = 5
 
 save_data = True
 
@@ -43,8 +43,8 @@ param_name = 'w' + j_label
 
 s = Identity() if stats_onthefly else BalancedNetworkStats(n_workers=n_cores_to_use)
 
-m = BalancedNetwork(inference_params=[param_name], dim=n_params, first_port=9000,
-                    verbose=True, n_servers=n_cores_to_use, duration=.5, parallel=True, calculate_stats=stats_onthefly)
+m = BalancedNetwork(inference_params=[param_name], dim=n_params, first_port=8600,
+                    verbose=True, estimate_time=True, n_servers=n_cores_to_use, duration=3.0, parallel=True, calculate_stats=stats_onthefly)
 
 p = dd.Uniform(lower=[0.5 * true_param[0]], upper=[1.3 * true_param[0]])
 
