@@ -35,7 +35,7 @@ stats_onthefly = True
 
 path_to_save_folder = '../results/'  # has to exist on your local path
 
-j_index = 0
+j_index = 2
 true_params = [0.024, 0.045, 0.014, 0.057]  # params from the paper
 j_label = ['ee', 'ei', 'ie', 'ii'][j_index]
 true_param = [true_params[j_index]]
@@ -43,10 +43,10 @@ param_name = 'w' + j_label
 
 s = Identity() if stats_onthefly else BalancedNetworkStats(n_workers=n_cores_to_use)
 
-m = BalancedNetwork(inference_params=[param_name], dim=n_params, first_port=8600,
-                    verbose=True, estimate_time=True, n_servers=n_cores_to_use, duration=3.0, parallel=True, calculate_stats=stats_onthefly)
+m = BalancedNetwork(inference_params=[param_name], dim=n_params, first_port=8700,
+                    verbose=True, estimate_time=False, n_servers=n_cores_to_use, duration=3.0, parallel=True, calculate_stats=stats_onthefly)
 
-p = dd.Uniform(lower=[0.5 * true_param[0]], upper=[1.3 * true_param[0]])
+p = dd.Uniform(lower=[0.8 * true_param[0]], upper=[1.4 * true_param[0]])
 
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 

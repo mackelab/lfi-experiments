@@ -28,7 +28,7 @@ path_to_save_folder = '../results/'  # has to exist on your local path
 true_params = [0.024, 0.045, 0.014, 0.057]  # params from the paper
 
 n_steps = 9
-n_cores_to_use = 32
+n_cores_to_use = 11
 
 jees = np.linspace(0.009, 0.049, n_steps)
 jeis = np.linspace(0.02, 0.06, n_steps)
@@ -40,7 +40,7 @@ n_simulations = n_steps ** 4
 print('N simulations:', n_simulations)
 
 # setup simulator to run the simulations
-simulator = BalancedNetwork(inference_params=['wxy'], dim=4, first_port=9000,
+simulator = BalancedNetwork(inference_params=['wxy'], dim=4, first_port=8400,
                             verbose=True, n_servers=n_cores_to_use, duration=3.,
                             estimate_time=True, calculate_stats=True)
 
