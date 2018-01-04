@@ -47,7 +47,8 @@ param_names = [param_names + 'w' + j_label for j_label in j_labels]
 s = Identity() if stats_onthefly else BalancedNetworkStats(n_workers=n_cores_to_use)
 
 m = BalancedNetwork(inference_params=param_names, dim=n_params, first_port=8500,
-                    verbose=True, n_servers=n_cores_to_use, duration=3.0, parallel=True, estimate_time=True, calculate_stats=stats_onthefly)
+                    verbose=True, n_servers=n_cores_to_use, duration=3.0, parallel=True, estimate_time=True,
+                    calculate_stats=stats_onthefly)
 
 p = dd.Uniform(lower=[0.8 * true_param for true_param in true_params],
                upper=[1.3 * true_param for true_param in true_params])
