@@ -18,6 +18,8 @@ except:
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats, Identity
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
+seed = None
+ree = 2.5
 n_params = 2
 n_cores_to_use = 32
 
@@ -46,11 +48,12 @@ param_names = [param_names + 'w' + j_label for j_label in j_labels]
 
 s = Identity() if stats_onthefly else BalancedNetworkStats(n_workers=n_cores_to_use)
 
-m = BalancedNetwork(inference_params=param_names, dim=n_params, first_port=8200, ree=2.5, 
-                    verbose=True, n_servers=n_cores_to_use, duration=3.0, parallel=True, estimate_time=True, calculate_stats=stats_onthefly)
+m = BalancedNetwork(inference_params=param_names, dim=n_params, first_port=8500, seed=seed, ree=ree,
+                    verbose=True, n_servers=n_cores_to_use, duration=3.0, parallel=True, estimate_time=True,
+                    calculate_stats=stats_onthefly)
 
-p = dd.Uniform(lower=[0.9 * true_param for true_param in true_params],
-               upper=[1.1 * true_param for true_param in true_params])
+p = dd.Uniform(lower=[0.8 * true_param for true_param in true_params],
+               upper=[1.3 * true_param for true_param in true_params], seed=seed)
 
 g = BalancedNetworkGenerator(model=m, prior=p, summary=s)
 
@@ -61,7 +64,7 @@ data = m.gen([true_params])
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.SNPE(g, obs=stats_obs, n_components=1, prior_norm=True, pilot_samples=n_pilot_samples)
+res = infer.SNPE(g, obs=stats_obs, n_components=1, prior_norm=True, pilot_samples=n_pilot_samples, seed=seed)
 
 # run with N samples
 out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=n_minibatch, round_cl=round_cl)
