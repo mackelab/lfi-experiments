@@ -19,7 +19,7 @@ except:
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
 # set the seed
-seed = 6
+seed = 1
 ree = 2.5
 n_params = 1
 n_cores_to_use = 24
@@ -28,8 +28,8 @@ ntrain = 1000
 n_minibatch = 100
 n_pilot_samples = 100
 
-nrounds = 10
-round_cl = 5
+nrounds = 5
+round_cl = 3
 
 save_data = True
 
