@@ -6,8 +6,12 @@ from balancednetwork.utils import *
 
 n_realizations = 1
 n_trials = 1
+plot_figures = False
+save_results = False
 
-np.random.seed(1)
+seed = 1
+
+np.random.seed(seed)
 
 # create simulation network
 net = Network()
@@ -99,9 +103,9 @@ for realization in range(n_realizations):
     PeCluster = [Pe[i * C:(i + 1) * C] for i in range(n_clusters)]
 
     # establish connections
-    Cii = Connection(Pi, Pi, 'x_i', sparseness=p_ii, weight=wii)
-    Cei = Connection(Pi, Pe, 'x_i', sparseness=p_ei, weight=wei)
-    Cie = Connection(Pe, Pi, 'x_e', sparseness=p_ie, weight=wie)
+    Cii = Connection(Pi, Pi, 'x_i', sparseness=p_ii, weight=wii, seed=seed)
+    Cei = Connection(Pi, Pe, 'x_i', sparseness=p_ei, weight=wei, seed=seed)
+    Cie = Connection(Pe, Pi, 'x_e', sparseness=p_ie, weight=wie, seed=seed)
     net.add(Cii)
     net.add(Cei)
     net.add(Cie)
@@ -110,7 +114,7 @@ for realization in range(n_realizations):
     Cee = Connection(Pe, Pe, state='x_e')
 
     if ree == 1.:
-        Cee = Connection(Pe, Pe, 'x_e', sparseness=p_ee, weight=wee)  # uniform only
+        Cee = Connection(Pe, Pe, 'x_e', sparseness=p_ee, weight=wee, seed=seed)  # uniform only
         print('uniform connectivity is used...')
     else:
         print('connecting the clusters...')
@@ -118,23 +122,12 @@ for realization in range(n_realizations):
             for j in range(n_clusters):
                 # cluster-internal excitatory connections
                 if i == j:
-                    Cee.connect_random(PeCluster[i], PeCluster[j], p=p_in, weight=wee * cluster_weight_factor)
+                    Cee.connect_random(PeCluster[i], PeCluster[j], p=p_in, weight=wee * cluster_weight_factor,
+                                       seed=seed)
 
                 # cluster-external excitatory connections
                 else:
-                    Cee.connect_random(PeCluster[i], PeCluster[j], p=p_out, weight=wee)
-
-        # kf = KFold(n_splits=n_clusters)
-        # for other_idx, cluster_idx in kf.split(range(n_clusters)):
-        #
-        #     Pin = Pe[cluster_idx[0]:cluster_idx[-1]]
-        #     Pout = Pe[other_idx[0]:other_idx[-1]]
-        #
-        #     # within cluster
-        #     Cee.connect_random(Pin, Pin, p=p_in, weight=wee * cluster_weight_factor)
-        #
-        #     # out of cluster
-        #     Cee.connect_random(Pin, Pout, p=p_out, weight=wee)
+                    Cee.connect_random(PeCluster[i], PeCluster[j], p=p_out, weight=wee, seed=seed)
 
     net.add(Cee)
     toc = time.time() - tic
@@ -177,21 +170,25 @@ for realization in range(n_realizations):
 time_str = time.time()
 data_filename = '{}ree{}_dur{}_brain1'.format(time_str, ree, simulation_time).replace('.', '')
 
-# save results to disk
-save_data(data=round_dict, filename=data_filename,
-          folder='/Users/Jan/Dropbox/Master/mackelab/code/lfi-experiments/balancednetwork/data/')
+if save_results:
+    folder = '/Users/Jan/Dropbox/Master/mackelab/code/lfi-experiments/balancednetwork/data/'
+    assert os.path.exists(folder), 'save path for brian1 script does not exist: {}'.format(folder)
 
-# #
-plt.figure(figsize=(15, 8))
-plt.subplot(211)
-raster_plot(sme, markersize=4)
-plt.title('Spike trains of E neurons, $R_{ee}$=' + '{}'.format(ree))
+    save_data(data=round_dict, filename=data_filename,
+              folder=folder)
 
-plt.subplot(212)
-raster_plot(smi, markersize=4)
+#
+if plot_figures:
+    plt.figure(figsize=(15, 8))
+    plt.subplot(211)
+    raster_plot(sme, markersize=4)
+    plt.title('Spike trains of E neurons, $R_{ee}$=' + '{}'.format(ree))
 
-spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.png'
-plt.tight_layout()
-save_figure(filename=spiketrain_filename, dpi=400,
-            folder='/Users/Jan/Dropbox/Master/mackelab/code/lfi-experiments/balancednetwork/figures/')
-plt.show()
+    plt.subplot(212)
+    raster_plot(smi, markersize=4)
+
+    spiketrain_filename = '{}_spiketrain_ree{}_dur{}_b1'.format(time_str, ree, simulation_time).replace('.', '') + '.png'
+    plt.tight_layout()
+    save_figure(filename=spiketrain_filename, dpi=400,
+                folder='/Users/Jan/Dropbox/Master/mackelab/code/lfi-experiments/balancednetwork/figures/')
+    plt.show()
