@@ -175,6 +175,8 @@ def run_smc(model, prior, summary, obs_stats, n_params, seed=None,n_particles=1e
     all_eps.append(eps)
     all_nsims.append(nsims)
 
+    break_flag = False
+
     print('iteration = {0}, eps = {1:.2}, ess = {2:.2%}'.format(iter, float(eps), 1.0))
 
     while eps > eps_last:
@@ -203,12 +205,19 @@ def run_smc(model, prior, summary, obs_stats, n_params, seed=None,n_particles=1e
                 dist = calc_dist(stats, obs_stats)
                 nsims += 1
                 if nsims>=maxsim:
-                    raise ValueError('Maximum number of simulations reached.')
-
+                    raise Warning('Maximum number of simulations reached.')
+                    break_flag = True
+                    break
             #new_ps_i = new_ps[i]
             logkernel = -0.5 * np.sum(np.linalg.solve(std, (new_ps[i] - ps).T) ** 2, axis=0)
             #new_logweights[i] = -float('inf') if np.any(new_ps_i > prior_max) or np.any(new_ps_i < prior_min) else -scipy.misc.logsumexp(logweights + logkernel)
             new_logweights[i] = prior.eval(new_ps[i, np.newaxis], log=True)[0] - scipy.misc.logsumexp(logweights + logkernel)
+
+            if break_flag:
+                break
+
+        if break_flag:
+            break
 
         ps = new_ps
         logweights = new_logweights - scipy.misc.logsumexp(new_logweights)
@@ -236,7 +245,7 @@ def run_smc(model, prior, summary, obs_stats, n_params, seed=None,n_particles=1e
         all_eps.append(eps)
         all_nsims.append(nsims)
 
-        return all_ps, all_logweights, all_eps, all_nsims
+    return all_ps, all_logweights, all_eps, all_nsims
 
         
 def calc_dist(stats_1, stats_2):
