@@ -42,6 +42,7 @@ def generate_negbin(N, r, prior):
 
     return theta, x
 
+
 def normalize(X, norm=None):
     if norm is None:
         xmean = X.mean(axis=0)
@@ -67,6 +68,7 @@ def poisson_evidence(x, k, theta, log=False):
     k : shape parameter for gamma
     theta : scale parameter for gamma
     """
+    # NOTE: SOMETHING SEEMS TO BE WRONG HERE!
     x_sum = np.sum(x)
     N = x.size
     log_xfac = np.sum(gammaln([x + 1.]))
@@ -74,6 +76,7 @@ def poisson_evidence(x, k, theta, log=False):
     result = - log_xfac - k * np.log(theta) - gammaln(k) + gammaln(k + x_sum) - (k + x_sum) * np.log(N + theta**-1)
 
     return result if log else np.exp(result)
+
 
 def poisson_sum_evidence(x, k, theta, log=True):
     N = x.size
@@ -137,6 +140,7 @@ def gamma_pdf(x, shape, scale, log=False):
         return result
     else:
         return torch.exp(result)
+
 
 def get_posterior(model, X_o, thetas, norm):
     data = calculate_stats(X_o)
@@ -235,8 +239,55 @@ def univariate_mog_pdf(y, mus, sigmas, alphas, log=False):
     return result
 
 
+def multivariate_mog_pdf(X, mus, Us, alphas, log=False):
+    """
+    Calculate pdf values for a batch of ND values under a mixture of multivariate Gaussians.
+
+    Parameters
+    ----------
+    X : Pytorch Varibale containing a Tensor
+        batch of samples, shape (batch_size, ndims)
+    mus : Pytorch Varibale containing a Tensor
+        means for every sample and mixture component, shape (batch_size, ndims, ncomponents)
+    Us: Pytorch Varibale containing a Tensor
+        upper triangle Choleski transform matrix of the precision matrices of every sample and component
+        shape (batch_size, ncomponents, ndims, ndims)
+    alphas: Pytorch Variable containing a Tensor
+        mixture weights for every sample, shape (batch_size, ncomponents)
+    log: bool
+      if True, log probs are returned
+
+    Returns
+    -------
+    result:  Variable containing a Tensor with shape (batch_size, 1)
+        batch of density values, if log=True log probs
+    """
+
+    # get params
+    n_batch, n_dims, n_components = mus.size()
+
+    # prelocate matrix for log probs of each Gaussian component
+    log_probs_mat = Variable(torch.zeros(n_batch, n_components))
+
+    # take weighted sum over components to get log probs
+    for k in range(n_components):
+        log_probs_mat[:, k] = multivariate_normal_pdf(X=X, mus=mus[:, :, k], Us=Us[:, k, :, :], log=True)
+
+    # now apply the log sum exp trick: sum_k alpha_k * N(Y|mu, sigma) = sum_k exp(log(alpha_k) + log(N(Y| mu, sigma)))
+    # this give the log MoG density over the batch
+    log_probs_batch = my_log_sum_exp(torch.log(alphas) + log_probs_mat, axis=1)  # sum over component axis=1
+
+    # return log or linear density dependent on flag:
+    if log:
+        result = log_probs_batch
+    else:
+        result = torch.exp(log_probs_batch)
+
+    return result
+
+
 def gauss_pdf(y, mu, sigma, log=False):
-    return univariate_normal_pdf(y, mu, sigma, log = False)
+    return univariate_normal_pdf(y, mu, sigma, log=log)
 
 
 def univariate_normal_pdf(X, mus, sigmas, log=False):
@@ -250,7 +301,7 @@ def univariate_normal_pdf(X, mus, sigmas, log=False):
     mus : Pytorch Varibale containing a Tensor
         means for every sample, shape (batch_size, 1)
     sigmas: Pytorch Varibale containing a Tensor
-        standard deviates for every sample, shape (batch_size, ndims, ndims)
+        standard deviations for every sample, shape (batch_size, 1)
     log: bool
       if True, log probs are returned
 
@@ -277,7 +328,7 @@ def multivariate_normal_pdf(X, mus, Us, log=False):
     mus : Pytorch Varibale containing a Tensor
         means for every sample, shape (batch_size, ndims)
     Us: Pytorch Varibale containing a Tensor
-        Choleski transform of precision matrix for every samples, shape (batch_size, ndims, ndims)
+        Choleski transform of precision matrix for every sample, shape (batch_size, ndims, ndims)
     log: bool
       if True, log probs are returned
 
@@ -305,3 +356,63 @@ def multivariate_normal_pdf(X, mus, Us, log=False):
         return result
     else:
         return torch.exp(result)
+
+
+def calculate_multivariate_normal_mu_posterior(X, sigma, N, mu_0, sigma_0):
+
+    """
+    Calculate the posterior over the mean parameter mu of a multivariate normal distribution given the data X,
+    the covariance of the data generating distribution and mean and covariance of the Gaussian prior on mu.
+
+    Parameters
+    ----------
+    X : numpy array (N, ndims)
+        batch of samples, shape (batch_size, ndims)
+    sigma:  numpy array (ndims, ndims)
+        covariance underlying the data
+    N : int
+        batch size
+    mu_0: numpy array (ndims, )
+        prior mean
+    sigma_0: numpy array (ndims, ndims)
+        prior covariance matrix
+
+    Returns
+    -------
+    mu_N: numpy array (ndims, )
+        mean of the posterior
+    sigma_N: numpy array (ndims, ndims)
+        covariance matrix of the posterior
+    """
+
+    # formulas from Bishop p92/93
+    sigma_N = np.linalg.inv(np.linalg.inv(sigma_0) + N * np.linalg.inv(sigma))
+    mu_N = sigma_N.dot(N * np.linalg.inv(sigma).dot(X.mean(axis=0)) + np.linalg.inv(sigma_0).dot(mu_0))
+
+    return mu_N, sigma_N
+
+
+def generate_nd_gaussian_dataset(n_samples, sample_size, prior, data_cov=None):
+
+    X = []
+    thetas = []
+    ndims = prior.mean.size
+
+    if data_cov is None:
+        data_cov = np.eye(ndims)
+
+    for i in range(n_samples):
+        # sample from the prior
+        theta = prior.rvs()
+
+        # generate samples with mean from prior and unit variance
+        x = scipy.stats.multivariate_normal.rvs(mean=theta, cov=data_cov, size=sample_size).reshape(sample_size, ndims)
+
+        sx = np.array([np.sum(x, axis=0).astype(float)])
+
+        # as data we append the summary stats
+        X.append(sx)
+        thetas.append([theta])
+
+    return np.array(X).squeeze(), np.array(thetas).squeeze()
+
