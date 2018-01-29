@@ -205,7 +205,7 @@ def run_smc(model, prior, summary, obs_stats, n_params, seed=None,n_particles=1e
                 dist = calc_dist(stats, obs_stats)
                 nsims += 1
                 if nsims>=maxsim:
-                    raise Warning('Maximum number of simulations reached.')
+                    print('Maximum number of simulations reached.')
                     break_flag = True
                     break
             #new_ps_i = new_ps[i]
