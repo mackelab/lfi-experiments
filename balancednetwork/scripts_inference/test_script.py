@@ -18,12 +18,12 @@ except:
     from lfimodels.balancednetwork.BalancedNetworkStats import BalancedNetworkStats, Identity
     from lfimodels.balancednetwork.BalancedNetworkGenerator import BalancedNetworkGenerator
 
-n_cores_to_use = 4
-ntrain = 4
-n_minibatch = 2
+n_cores_to_use = 20
+ntrain = 20
+n_minibatch = 10
 nrounds = 2
 n_pilot_samples = 0
-round_cl = 3
+round_cl = 2
 
 true_ree = 2.5
 
