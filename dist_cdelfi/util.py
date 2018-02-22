@@ -7,6 +7,7 @@ from tqdm import tqdm, tqdm_notebook
 
 
 def batch_generator(dataset, batch_size=5):
+    assert type(dataset) == list, 'dataset should be a list'
     shuffle(dataset)
     N_full_batches = len(dataset) // batch_size
     for i in range(N_full_batches):
@@ -25,7 +26,7 @@ def train_sgd(X, model, optimizer=torch.optim.Adam,
     losses = []
 
     for epoch in progress:
-        bgen = batch_generator(X, n_minibatch)
+        bgen = batch_generator(X, batch_size=n_minibatch)
 
         for j, x_batch in enumerate(bgen):
             loss, _ = model(x_batch)
