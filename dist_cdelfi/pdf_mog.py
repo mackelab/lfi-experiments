@@ -36,7 +36,7 @@ def multivariate_mog_pdf(X, weights, mus, Ls, log=False):
     else:
         dtype = torch.FloatTensor
 
-    log_probs_mat = Variable(torch.zeros(n_batch, n_components).type(dtype))
+    log_probs_mat = Variable(torch.zeros(n_batch, n_components).type(dtype), requires_grad=False)
 
     # take weighted sum over components to get log probs
     for k in range(n_components):
