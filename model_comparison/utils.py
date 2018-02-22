@@ -7,6 +7,8 @@ from random import shuffle
 from scipy.stats import gamma, beta, nbinom, poisson
 import scipy
 from scipy.special import gammaln, betaln
+import matplotlib.pyplot as plt
+import os
 
 
 def log_betafun(a, b):
@@ -65,45 +67,149 @@ def batch_generator(dataset, batch_size=5):
 
 def poisson_evidence(x, k, theta, log=False):
     """
-    k : shape parameter for gamma
-    theta : scale parameter for gamma
+    Calculate evidence of a sample x under a Poisson model with Gamma prior.
+
+    E(x) = gamma(k + sx) / ( gamma(k) * theta**k ) * (N + 1/theta)**(-k - sx) / prod x_i!
+
+    Parameters
+    ----------
+    x : array-like
+        batch of samples, shape (batch_size, )
+    k : float
+        shape parameter of the gamma prior
+    theta: float
+        scale parameter of the gamma prior
+    log: bool
+        if True, the log evidence is returned
+
+    Returns
+    -------
+    log_evidence: float
+        the log evidence (if log=True) or the evidence of the data
     """
-    # NOTE: SOMETHING SEEMS TO BE WRONG HERE!
-    x_sum = np.sum(x)
-    N = x.size
-    log_xfac = np.sum(gammaln([x + 1.]))
+    sx = np.sum(x)
+    n_batch = x.size
 
-    result = - log_xfac - k * np.log(theta) - gammaln(k) + gammaln(k + x_sum) - (k + x_sum) * np.log(N + theta**-1)
+    log_evidence = gammaln(k + sx) - (gammaln(k) + k * np.log(theta)) - (k + sx) * np.log(n_batch + theta ** -1) \
+                   - np.sum(gammaln(np.array(x) + 1))
 
-    return result if log else np.exp(result)
+    return log_evidence if log else np.exp(log_evidence)
 
 
 def poisson_sum_evidence(x, k, theta, log=True):
-    N = x.size
+    """
+    Calculate the evidence of the summary statistics of a sample under a Poisson model with Gamma prior.
+    Given a batch of samples calculate the evidence (marginal likelihood) of the sufficient statistics
+    (sum over the sample). Note the difference ot the poisson_evidence() method that calculates the evidence of the
+    whole data sample.
+
+    E(sx) = gamma(k + sx) / ( gamma(k) * (N*theta)**k ) * (1 + 1/(N*theta))**(-k - sx) / (sum x_i)!
+
+    Parameters
+    ----------
+    x : array-like
+        batch of samples, shape (batch_size, )
+    k : float
+        shape parameter of the gamma prior
+    theta: float
+        scale parameter of the gamma prior
+    log: bool
+        if True, the log evidence is returned
+
+    Returns
+    -------
+    log_evidence: float
+        the log evidence (if log=True) or the evidence of the data
+    """
+
+    n_batch = x.size
     sx = np.sum(x)
 
-    result = -k * np.log(theta * N) - gammaln(k) - gammaln(sx + 1) + gammaln(k + sx) - (k + sx) * np.log(1 + (theta * N)**-1)
+    result = -k * np.log(theta * n_batch) - gammaln(k) - gammaln(sx + 1) + gammaln(k + sx) - \
+             (k + sx) * np.log(1 + (theta * n_batch)**-1)
 
     return result if log else np.exp(result)
 
 
-def nbin_evidence(x, a, b, r, log=False):
-    # NOTE: SOMETHING SEEMS TO BE WRONG HERE! 
-    N = x.size
-    x_sum = np.sum(x)
+def nbinom_evidence(x, r, a, b, log=False):
+    """
+    Calculate the evidence of a sample x under a negative binomial model with fixed r and beta prior on the success
+    probability p.
 
-    result = betaln(a + N * r, b + x_sum) - betaln(a, b) + np.sum(np.log(scipy.special.binom(x + r - 1, x)))
+    E(x) = \prod gamma(x_i +r) / ( gamma(x_i + 1) * gamma(r)**N ) * B(a + sx, b + Nr) / B(a, b)
 
-    return result if log else np.exp(result)
+    Parameters
+    ----------
+    x : array-like
+        batch of samples, shape (batch_size, )
+    r : int
+        number of successes of the nbinom process
+    a: float
+        shape parameter alpha of the beta prior
+    b: float
+        shape parameter beta of the beta prior
+    log: bool
+        if True, the log evidence is returned
 
-def nbin_sum_evidence(x, a, b, r, log=False):
+    Returns
+    -------
+    log_evidence: float
+        the log evidence (if log=True) or the evidence of the data
+    """
+    b_batch = x.size
+    sx = np.sum(x)
+
+    fac = np.sum(gammaln(np.array(x) + r) - (gammaln(np.array(x) + 1) + gammaln([r])))
+    log_evidence = fac + betaln(a + sx, b + b_batch * r) - betaln(a, b)
+
+    return log_evidence if log else np.exp(log_evidence)
+
+
+def nbinom_evidence_scipy(x, r, a, b, log=False):
+    b_batch = x.size
+    sx = np.sum(x)
+
+    fac = np.sum(gammaln(np.array(x) + r) - (gammaln(np.array(x) + 1) + gammaln([r])))
+    log_evidence = fac + betaln(a + b_batch * r, b + sx) - betaln(a, b)
+
+    return log_evidence if log else np.exp(log_evidence)
+
+
+def nbinom_sum_evidence(x, r, a, b, log=True):
+
+    """
+    Calculate the evidence of a the sufficient statistics sx of a sample x under a negative binomial model with fixed
+    r and beta prior on the success probability p.
+
+    E(sx) = binom(sx + Nr - 1, sx) * B(a + sx, b + Nr) / B(a, b)
+
+    Parameters
+    ----------
+    x : array-like
+        batch of samples, shape (batch_size, )
+    r : int
+        number of successes of the nbinom process
+    a: float
+        shape parameter alpha of the beta prior
+    b: float
+        shape parameter beta of the beta prior
+    log: bool
+        if True, the log evidence is returned
+
+    Returns
+    -------
+    log_evidence: float
+        the log evidence (if log=True) or the evidence of the data
+    """
+
     N = x.size
     sx = np.sum(x)
-    s = N * r
-    
-    result = betaln(a + s, b + sx) - betaln(a, b) + np.log(scipy.special.binom(sx + s - 1, sx))
+    bc = scipy.special.binom(sx + N * r - 1, sx)
 
-    return result if log else np.exp(result)
+    log_evidence = np.log(bc) + betaln(a + sx, b + N * r) - betaln(a, b)
+
+    return log_evidence if log else np.exp(log_evidence)
+
 
 # magical gammaln fun from pyro
 def log_gamma(xx):
@@ -416,3 +522,142 @@ def generate_nd_gaussian_dataset(n_samples, sample_size, prior, data_cov=None):
 
     return np.array(X).squeeze(), np.array(thetas).squeeze()
 
+
+def save_figure(filename, time_stamp, folder='figures'):
+    plt.savefig(os.path.join(folder, time_stamp + filename + '.png'), dpi=300)
+
+
+def sample_poisson(prior, n_samples, sample_size, seed=None):
+    thetas = []
+    samples = []
+
+    # set the seed
+    np.random.seed(seed)
+
+    for sample_idx in range(n_samples):
+        thetas.append(prior.rvs())
+        samples.append(scipy.stats.poisson.rvs(mu=thetas[sample_idx], size=sample_size))
+
+    return np.array(thetas), np.array(samples)
+
+
+def sample_poisson_gamma_mixture(prior1, prior2, n_samples, sample_size, seed=None):
+    thetas = []
+    samples = []
+    lambs = []
+
+    # set the seed
+    np.random.seed(seed)
+
+    for sample_idx in range(n_samples):
+
+        # for every sample, get a new gamma prior
+        thetas.append([prior1.rvs(), prior2.rvs()])
+        gamma_prior = scipy.stats.gamma(a=thetas[sample_idx][0], scale=thetas[sample_idx][1])
+
+        # now for every data point in the sample, to get NB, sample from that gamma prior into the poisson
+        sample = []
+        ls = []
+        for ii in range(sample_size):
+            ls.append(gamma_prior.rvs())
+            sample.append(scipy.stats.poisson.rvs(ls[ii]))
+
+        # add data set to samples
+        samples.append(sample)
+        lambs.append(ls)
+
+    return np.array(thetas), np.array(samples), np.array(lambs)
+
+
+def nbinom_pmf(k, r, p):
+    """
+    Calculate pmf values according to Wikipedia definition of the negative binomial distribution:
+    p(X=x | r, p = (x + r - 1)choose(x) p^x (1 - p)^r
+    """
+
+    return scipy.special.binom(k + r - 1, k) * np.power(p, k) * np.power(1-p, r)
+
+
+def nbinom_pmf_indirect(x, k, theta):
+    """
+    Calculate pmf values using the indirect sampling scheme via the Poisson-Gamma mixture. It is
+
+        p(X=x | k, theta) = \int poisson(x | \lambda) gamma(\lambda | k, \theta) d\lambda
+
+    The integral over \lambda is calculated using the double integration method from scipy.integrate.dbpquad
+    """
+
+    # set the gamma mixture pdf
+    gamma_pdf = scipy.stats.gamma(a=k, scale=theta)
+
+    # define integrant function: poisson(x | \lambda) gamma(\lambda | k, \theta)
+    fun = lambda lam, ix: scipy.stats.poisson.pmf(ix, mu=lam) * scipy.stats.gamma.pdf(lam, a=k, scale=theta)
+
+    # for every sample
+    pmf_values = []
+    for ix in x.squeeze():
+        # integrate over all lambdas
+        pmf_value, rr = scipy.integrate.quad(func=fun,
+                                             a=float(gamma_pdf.ppf(1e-8)),
+                                             b=float(gamma_pdf.ppf(1 - 1e-8)),
+                                             args=[ix], epsrel=1e-10)
+        pmf_values.append(pmf_value)
+
+    return pmf_values
+
+
+def nb_evidence_grid_integral(x, prior_k, prior_theta, ks, thetas, integrant, log=False):
+
+    k_grid, th_grid = np.meshgrid(ks, thetas)
+
+    grid_values = np.zeros((thetas.size, ks.size))
+
+    for i in range(thetas.shape[0]):
+        for j in range(ks.shape[0]):
+            grid_values[i, j] = integrant(k_grid[i, j], th_grid[i, j], x, prior_k, prior_theta)
+
+    integral = np.trapz(np.trapz(grid_values, x=thetas, axis=0), x=ks, axis=0)
+
+    return np.log(integral) if log else integral
+
+
+def nb_evidence_integrant_indirect(k, theta, x, prior_k, prior_theta):
+    """
+    Negative Binomial marginal likelihood integrant for the indirect sampling method via Poisson-Gamma mixture.
+    """
+
+    # get the prior pdf values for k and theta
+    pk = prior_k.pdf(k)
+    ptheta = prior_theta.pdf(theta)
+
+    # evaluate the pmf and take the product (log sum) over samples, multiply with prior pds values
+    value = np.log(nbinom_pmf_indirect(x, k, theta)).sum() + np.log(pk) + np.log(ptheta)
+
+    # return exponential
+    return np.exp(value)
+
+
+def nb_evidence_integrant_direct(r, p, x, prior_k, prior_theta):
+    """
+    Negative Binomial marginal likelihood integrant: NB likelihood times prior pds values for given set of prior params
+    """
+    # set prior params for direct NB given params for indirect Poisson-Gamma mixture (Gamma priors on k and theta)
+
+    # get pdf values
+    pk = prior_k.pdf(r)
+    # do change of variables or not?
+    pp = np.power(1 - p, -2) * prior_theta.pdf(p / (1 - p))
+
+    value = np.log(nbinom_pmf(x, r, p)).sum() + np.log(pk) + np.log(pp)
+
+    return np.exp(value)
+
+
+def calculate_pprob_from_evidences(pd1, pd2, priors=None): 
+    if priors is None: 
+        # p(m|d) = p(d | m) * p(m) / (sum_ p(d|m_i)p(m))))
+        # because the prior is uniform we just return the normalized evidence: 
+        return pd1 / (pd1 + pd2)
+    else: 
+        # p(m|d) = p(d | m) * p(m) / (sum_ p(d|m_i)p(m))))
+        return pd1 * priors[0] / (pd1 * priors[0] + pd2 * priors[1])

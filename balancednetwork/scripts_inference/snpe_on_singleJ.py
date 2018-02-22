@@ -20,16 +20,17 @@ except:
 
 # set the seed
 seed = 1
-ree = 2.5
+ree = 1.0
 n_params = 1
-n_cores_to_use = 24
+n_cores_to_use = 32
 
 ntrain = 1000
 n_minibatch = 100
 n_pilot_samples = 100
 
-nrounds = 5
-round_cl = 3
+nrounds = 3
+round_cl = 2
+svi = True
 
 save_data = True
 
@@ -47,7 +48,8 @@ param_name = 'w' + j_label
 s = Identity() if stats_onthefly else BalancedNetworkStats(n_workers=n_cores_to_use)
 
 m = BalancedNetwork(inference_params=[param_name], dim=n_params, first_port=8700, seed=seed, ree=ree,
-                    verbose=True, estimate_time=False, n_servers=n_cores_to_use, duration=3.0, parallel=True, calculate_stats=stats_onthefly)
+                    verbose=True, estimate_time=False, n_servers=n_cores_to_use, duration=3.0, parallel=True,
+                    calculate_stats=stats_onthefly)
 
 p = dd.Uniform(lower=[0.8 * true_param[0]], upper=[1.4 * true_param[0]], seed=seed)
 
@@ -60,7 +62,7 @@ data = m.gen(true_param)
 stats_obs = s.calc(data[0])
 
 # set up inference
-res = infer.SNPE(g, obs=stats_obs, prior_norm=True, n_components=1, pilot_samples=n_pilot_samples, seed=seed)
+res = infer.SNPE(g, obs=stats_obs, prior_norm=True, n_components=1, pilot_samples=n_pilot_samples, seed=seed, svi=svi)
 
 # run with N samples
 out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=n_minibatch, round_cl=round_cl)
@@ -68,10 +70,11 @@ out, trn_data, posteriors = res.run(ntrain, nrounds, epochs=500, minibatch=n_min
 # evaluate the posterior at the observed data
 posterior = res.predict(stats_obs)
 
-result_dict = dict(true_params=true_param, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain,
-                   posterior=posterior, out=out, trn_data=trn_data, prior=p, posterior_list=posteriors)
+result_dict = dict(true_params=true_param, stats_obs=stats_obs, nrouns=nrounds, ntrain=ntrain, seed=seed,
+                   posterior=posterior, out=out, trn_data=trn_data, prior=p, posterior_list=posteriors, svi=svi)
 
-simulation_name = '{}_snpe_cJ{}_r{}_n{}_rcl{}_seed{}'.format(time.time(), j_label, nrounds, ntrain, round_cl, int(seed)).replace('.', '')
+simulation_name = '{}_snpe_J{}_r{}_n{}_rcl{}_seed{}'.format(time.time(), j_label, nrounds, ntrain,
+                                                             round_cl, int(seed)).replace('.', '')
 
 # save the results
 if save_data:
