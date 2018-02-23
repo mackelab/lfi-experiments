@@ -20,7 +20,7 @@ class Gauss(BaseSimulator):
         seed : int or None
             If set, randomness is seeded
         """
-        super().__init__(dim_param=S.ndim, seed=seed)
+        super().__init__(dim_param=S.shape[0], seed=seed)
         self.S = S
         self.n = n
 
