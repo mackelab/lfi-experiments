@@ -25,7 +25,7 @@ duration = 3.0
 n_cores_to_use = 32
 svi = False
 
-ntrain = 25000
+ntrain = 35000
 n_minibatch = 100
 n_pilot_samples = 100
 
