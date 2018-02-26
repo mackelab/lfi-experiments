@@ -124,7 +124,7 @@ class MoG(nn.Module):
         return dd.MoG(a=a, ms=ms, Us=Us)
 
 class MoGTrainer:
-    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.02, es_rounds=200, es_thresh=0, dtype=dtype):
+    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.01, es_rounds=0, es_thresh=0, dtype=dtype):
         """ Train a MoG to fit uncorrected posterior
         
         Parameters
@@ -233,7 +233,6 @@ class MoGTrainer:
         
         # Progress bars cause bugs
         with tqdm(range(nsteps)) as progress:
-        #if True:
             losses = []
 
             #for step in range(nsteps):

@@ -85,7 +85,7 @@ class DDELFI(BaseInference):
         return loss
 
     def run(self, n_train=100, n_rounds=2, epochs=100, minibatch=50,
-            monitor=None, **kwargs):
+            monitor=None, mog_nsteps=5000, mog_samples=10000, **kwargs):
         """Run algorithm
 
         Parameters
@@ -166,21 +166,25 @@ class DDELFI(BaseInference):
                 self.network.params_dict = new_params
 
             trn_inputs = [self.network.params, self.network.stats]
+            
+            mog_kwargs = { k[4:] : kwargs[k] for k in kwargs if k.startswith("mog_") }
+            trn_kwargs = { k : kwargs[k] for k in kwargs if not k.startswith("mog_") }
 
             t = Trainer(self.network, self.loss(N=n_train_round),
                         trn_data=trn_data, trn_inputs=trn_inputs,
                         monitor=self.monitor_dict_from_names(monitor),
-                        seed=self.gen_newseed(), **kwargs)
+                        seed=self.gen_newseed(), **trn_kwargs)
             logs.append(t.train(epochs=epochs, minibatch=minibatch,
                                 verbose=verbose))
             trn_datasets.append(trn_data)
 
-            posteriors.append(self.predict(self.obs))
+            
+            posteriors.append(self.predict(self.obs, **mog_kwargs))
             uncorrected.append(super().predict(self.obs))
 
         return logs, trn_datasets, posteriors, uncorrected
 
-    def predict(self, x, nsamples = 10000, nsteps = 50000, **kwargs):
+    def predict(self, x, nsamples = 10000, nsteps = 5000, **kwargs):
         """Predict posterior given x
 
         Parameters
