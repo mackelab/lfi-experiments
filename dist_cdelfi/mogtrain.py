@@ -10,6 +10,7 @@ from tqdm import tqdm
 from pdf_mog import multivariate_mog_pdf
 
 dtype = torch.FloatTensor
+
 class MoG(nn.Module):
     def __init__(self, n_components, dim, dtype=dtype):
         """ Trainable MoG using torch.autograd 
@@ -208,7 +209,7 @@ class MoGTrainer:
         Parameters
         ----------
         nsteps : int
-            Number of steps
+            Number of steps. If nsteps == -1, train until convergence.
         lr : float (default self.lr)
             Learning rate
         es_rounds : int (default self.es_rounds)
@@ -229,10 +230,17 @@ class MoGTrainer:
         if es_thresh == None:
             es_thresh = self.es_thresh
                
+        if nsteps == -1 and es_rounds == 0:
+            raise ValueError("Training MoG with indefinite number of steps and no convergence criterion")
+            
         optim = torch.optim.Adam(self.mog.parameters(), lr=lr)
         
         # Progress bars cause bugs
-        with tqdm(range(nsteps)) as progress:
+        if nsteps == -1:
+            progress = tqdm(iter(int, 1))
+        else:
+            progress = tqdm(range(nsteps))
+        with progress:
             losses = []
 
             #for step in range(nsteps):

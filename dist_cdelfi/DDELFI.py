@@ -85,7 +85,7 @@ class DDELFI(BaseInference):
         return loss
 
     def run(self, n_train=100, n_rounds=2, epochs=100, minibatch=50,
-            monitor=None, mog_nsteps=5000, mog_samples=10000, **kwargs):
+            monitor=None, **kwargs):
         """Run algorithm
 
         Parameters
@@ -177,14 +177,13 @@ class DDELFI(BaseInference):
             logs.append(t.train(epochs=epochs, minibatch=minibatch,
                                 verbose=verbose))
             trn_datasets.append(trn_data)
-
             
             posteriors.append(self.predict(self.obs, **mog_kwargs))
             uncorrected.append(super().predict(self.obs))
 
         return logs, trn_datasets, posteriors, uncorrected
 
-    def predict(self, x, nsamples = 10000, nsteps = 5000, **kwargs):
+    def predict(self, x, nsamples=10000, nsteps=5000, **kwargs):
         """Predict posterior given x
 
         Parameters
@@ -192,15 +191,21 @@ class DDELFI(BaseInference):
         x : array
             Stats for which to compute the posterior
         """
+        
         if self.generator.proposal is None:
             # no correction necessary
             return super().predict(x)  # via super
         else:
             qphi = super().predict(x)  # via super
             
-            trainer = MoGTrainer(self.generator.prior, self.generator.proposal, qphi, ncomponents=self.n_components, nsamples=nsamples)
+            trainer = MoGTrainer(prop=self.generator.proposal, 
+                                 prior=self.generator.prior, 
+                                 qphi=qphi, 
+                                 ncomponents=self.n_components, 
+                                 nsamples=nsamples, 
+                                 **kwargs)
             
-            trainer.train(nsteps=nsteps, **kwargs)
+            trainer.train(nsteps=nsteps)
             
             posterior = trainer.get_mog()
             return posterior
