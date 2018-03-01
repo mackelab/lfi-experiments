@@ -124,8 +124,27 @@ class MoG(nn.Module):
         
         return dd.MoG(a=a, ms=ms, Us=Us)
 
+    def set_distribution(self, target):
+        if isinstance(target, dd.Gaussian):
+            target = dd.MoG(a=[1], ms=[target.m], Ss=[target.S])
+            
+        if not isinstance(target, dd.MoG):
+            raise TypeError("Cannot initialise trainable MoG to non-MoG target distribution")
+        
+        self.weights.data = dtype(np.log(target.a))
+        self.mus.data = dtype([ np.copy(x.m) for x in target.xs ])
+        
+        Ls = np.copy([ np.linalg.cholesky(x.S) for x in target.xs ])
+        (idx1, idx2) = np.diag_indices(self.dim)
+        Ls[:,idx1,idx2] = np.log(Ls[:,idx1,idx2])
+        
+        # assign vector to lower triangle of Ls
+        (idx1, idx2) = np.tril_indices(self.dim)
+        self.Lvecs.data = dtype(Ls[:, idx1, idx2])
+        
+        
 class MoGTrainer:
-    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.01, es_rounds=0, es_thresh=0, dtype=dtype):
+    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.01, es_rounds=0, es_thresh=0, dtype=dtype, init_to_qphi=True):
         """ Train a MoG to fit uncorrected posterior
         
         Parameters
@@ -164,6 +183,12 @@ class MoGTrainer:
         self.lr = lr
         self.es_rounds = es_rounds
         self.es_thresh = es_thresh
+        
+        if init_to_qphi:
+            try:
+                self.mog.set_distribution(self.qphi)
+            except TypeError:
+                pass
         
     def redraw_samples(self, nsamples):
         """ Draw samples from proposal prior for Monte-Carlo simulations
