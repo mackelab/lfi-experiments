@@ -124,8 +124,30 @@ class MoG(nn.Module):
         
         return dd.MoG(a=a, ms=ms, Us=Us)
 
+    def set_distribution(self, target):
+        if isinstance(target, dd.Gaussian):
+            target = dd.MoG(a=[1], ms=[target.m], Ss=[target.S])
+            
+        if not isinstance(target, dd.MoG):
+            raise TypeError("Cannot initialise trainable MoG to non-MoG target distribution")
+            
+        if target.ncomp != self.n_components:
+            raise TypeError("Cannot initialise trainable MoG to MoG target distribution with different number of components")
+        
+        self.weights.data = dtype(np.log(target.a))
+        self.mus.data = dtype([ np.copy(x.m) for x in target.xs ])
+        
+        Ls = np.copy([ np.linalg.cholesky(x.S) for x in target.xs ])
+        (idx1, idx2) = np.diag_indices(self.dim)
+        Ls[:,idx1,idx2] = np.log(Ls[:,idx1,idx2])
+        
+        # assign vector to lower triangle of Ls
+        (idx1, idx2) = np.tril_indices(self.dim)
+        self.Lvecs.data = dtype(Ls[:, idx1, idx2])
+        
+        
 class MoGTrainer:
-    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.01, es_rounds=0, es_thresh=0, dtype=dtype):
+    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.01, es_rounds=0, es_thresh=0, dtype=dtype, init_to_qphi=True):
         """ Train a MoG to fit uncorrected posterior
         
         Parameters
@@ -164,6 +186,12 @@ class MoGTrainer:
         self.lr = lr
         self.es_rounds = es_rounds
         self.es_thresh = es_thresh
+        
+        if init_to_qphi:
+            try:
+                self.mog.set_distribution(self.qphi)
+            except TypeError:
+                pass
         
     def redraw_samples(self, nsamples):
         """ Draw samples from proposal prior for Monte-Carlo simulations
@@ -271,3 +299,69 @@ class MoGTrainer:
         """
         
         return self.mog.get_distribution()
+
+class DefensiveDistribution(dd.BaseDistribution.BaseDistribution):
+    """Defensive distribution
+    """
+    def __init__(self, prop, prior, alpha, seed=None):
+        super().__init__(prop.ndim, seed=seed)
+
+        self.prop = prop
+        self.prior = prior
+        self.alpha = alpha
+        
+        assert 0 <= alpha and alpha <= 1, "Alpha in DefensiveDistribution must be between 0 and 1"
+
+    def eval(self, x, ii=None, log=True):
+        eval_prop = self.prop.eval(x, ii=ii, log=False)
+        eval_prior = self.prior.eval(x, ii=ii, log=False)
+        
+        ret = (1 - self.alpha) * eval_prop + self.alpha * eval_prior
+
+        if log:
+            return np.log(ret)
+        else:
+            return ret
+
+    def gen(self, n_samples=1):
+        prior_mask = self.rng.binomial(n=1, p=self.alpha, size=(n_samples,)).astype(bool)
+        n_prior_draws = np.count_nonzero(prior_mask)
+        ret = np.empty((n_samples, self.ndim))
+        ret[prior_mask] = self.prior.gen(n_samples=n_prior_draws)
+        ret[~prior_mask] = self.prop.gen(n_samples=n_samples-n_prior_draws)
+        
+        return ret
+    
+class DividedPdf:
+    def __init__(self, a, b, norm_region):
+        self.a = a
+        self.b = b
+        
+        self.ndim = self.a.ndim
+        self.Z = 1
+        
+        mass = self.get_mass(norm_region)
+        self.Z = mass
+        
+        
+    def get_mass(self, norm_region):
+        dim = self.a.ndim
+
+        unif = dd.Uniform(norm_region[0] * np.ones(dim), norm_region[1] * np.ones(dim))
+        mgrid = unif.gen(5000000)
+
+        N = (norm_region[1] - norm_region[0]) ** dim
+        samples = self.eval(mgrid, log=False)
+
+        mass = np.mean(samples) * N
+        return mass
+        
+    def eval(self, samples, log=True):
+        ret = self.a.eval(samples, log=log) / self.b.eval(samples, log=log)
+        return ret / self.Z
+    
+def divide_dists(a, b, norm_region):
+    if isinstance(a, dd.Gaussian) and isinstance(b, dd.Gaussian):
+        return a / b
+    
+    return DividedPdf(a, b, norm_region)
