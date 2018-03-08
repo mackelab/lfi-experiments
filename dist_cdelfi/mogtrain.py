@@ -147,7 +147,7 @@ class MoG(nn.Module):
         
         
 class MoGTrainer:
-    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.01, es_rounds=0, es_thresh=0, dtype=dtype, init_to_qphi=True):
+    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.02, es_rounds=1000, es_thresh=0, dtype=dtype, init_to_qphi=True):
         """ Train a MoG to fit uncorrected posterior
         
         Parameters
