@@ -7,12 +7,12 @@ from delfi.neuralnet.NeuralNet import NeuralNet
 from delfi.neuralnet.Trainer import Trainer
 from delfi.neuralnet.loss.regularizer import svi_kl_zero
 
-from mogtrain import MoGTrainer
+from mogtrain import MoGTrainer, DefensiveDistribution
 
 class DDELFI(BaseInference):
     def __init__(self, generator, obs, prior_norm=False, pilot_samples=100,
                  n_components=1, reg_lambda=0.01, seed=None, verbose=True,
-                 **kwargs):
+                 prior_mixin=0, **kwargs):
         """Conditional density estimation likelihood-free inference (CDE-LFI)
 
         Implementation of algorithms 1 and 2 of Papamakarios and Murray, 2016.
@@ -57,6 +57,7 @@ class DDELFI(BaseInference):
 
         self.n_components = n_components
         self.obs = obs
+        self.prior_mixin = prior_mixin
 
         if np.any(np.isnan(self.obs)):
             raise ValueError("Observed data contains NaNs")
@@ -120,7 +121,7 @@ class DDELFI(BaseInference):
         logs = []
         trn_datasets = []
         posteriors = []
-        uncorrected = []
+        preds = []
 
         for r in range(1, n_rounds + 1):  # start at 1
             # if round > 1, set new proposal distribution before sampling
@@ -129,8 +130,13 @@ class DDELFI(BaseInference):
                 if len(posteriors) != 0:
                     posterior = posteriors[-1]
                 else:
-                    posterior = self.predict(self.obs)
-                self.generator.proposal = posterior
+                    posterior = super().predict(self.obs)
+                    
+                proposal = posterior
+                if self.prior_mixin != 0:
+                    proposal = DefensiveDistribution(proposal, self.generator.prior, alpha=self.prior_mixin, seed=self.gen_newseed())
+                
+                self.generator.proposal = proposal
 
             # number of training examples for this round
             if type(n_train) == list:
@@ -178,12 +184,14 @@ class DDELFI(BaseInference):
                                 verbose=verbose))
             trn_datasets.append(trn_data)
             
-            posteriors.append(self.predict(self.obs, **mog_kwargs))
-            uncorrected.append(super().predict(self.obs))
+            pred = self.compute_posterior(self.obs, **mog_kwargs)
+            
+            preds.append(pred)
+            posteriors.append(pred['posterior'])
 
-        return logs, trn_datasets, posteriors, uncorrected
+        return logs, trn_datasets, posteriors, preds
 
-    def predict(self, x, nsamples=10000, nsteps=5000, **kwargs):
+    def compute_posterior(self, x, nsamples=10000, nsteps=-1, **kwargs):
         """Predict posterior given x
 
         Parameters
@@ -194,7 +202,7 @@ class DDELFI(BaseInference):
         
         if self.generator.proposal is None:
             # no correction necessary
-            return super().predict(x)  # via super
+            return { 'posterior' : super().predict(x) }  # via super
         else:
             qphi = super().predict(x)  # via super
             
@@ -208,4 +216,5 @@ class DDELFI(BaseInference):
             trainer.train(nsteps=nsteps)
             
             posterior = trainer.get_mog()
-            return posterior
+            return { 'posterior' : posterior, 'prior' : self.generator.prior, 'proposal' : self.generator.proposal, 'qphi' : qphi }
+ 
