@@ -6,20 +6,23 @@ class LotkaVolterraStats(BaseSummaryStats):
         super().__init__(seed=seed)
         self.n_summary = 9
 
-    def calc(self, data):
+    def calc(self, output):
         """
         Parameters
         ----------
-        data: array (...x2N)
+        data: dict (entry 'data':array (...x2xN))
 
         Result
         ------
         summ: array (...xn_summary)
         """
 
-        data = np.atleast_2d(data)
-        data_shape = data.shape[:-2] + (2,data.shape[-1] // 2) 
-        data = data.reshape(data_shape, order='F')
+        data = [ x['data'] for x in output ]
+        data = np.asarray(data)
+        if len(data.shape) <= 2:
+            data = data.reshape((-1,*data.shape))
+
+        assert(data.ndim >= 3)
 
         ms = np.mean(data, axis=-1, keepdims=True)
         s2s = np.var(data, axis=-1, keepdims=True, ddof=1)
@@ -28,11 +31,13 @@ class LotkaVolterraStats(BaseSummaryStats):
 
         lags = [1,2]
 
-        ac = np.tensordot(data[...,:-lags], data[...,lags:].T, axes=1) / data.shape[-1]
+        ac = [ np.einsum('...j,...j->...', data[...,:-lag], data[...,lag:])  for lag in lags ]
 
-        cc = np.tensordot(data[...,0,:], data[...,1,:].T, axes=1) / data.shape[-1]
+        ac = np.einsum('i...->...i', ac) / data.shape[-1]
+
+        cc = np.atleast_2d(np.einsum('...i,...i->...', data[...,0,:], data[...,1,:])) / data.shape[-1]
 
         return np.concatenate((ms.squeeze(-1),  # Undo keepdims
                                s2s.squeeze(-1), # Dito
-                               ac.reshape(*ac.shape[:-2], 2 * len(lag)),
+                               ac.reshape((*ac.shape[:-2], 2 * len(lags))),
                                cc), axis=-1)
