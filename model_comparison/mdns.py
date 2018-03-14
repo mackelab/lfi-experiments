@@ -58,12 +58,10 @@ class Trainer:
 
         raise NotImplementedError
 
-        assert self.trained, 'You need to train the network before predicting'
-        assert(isinstance(samples, Variable)), 'samples must be in torch Variable'
-        assert samples.size()[1] == self.model.ndims, 'samples must be 2D matrix with (batch_size, ndims)'
-
-
-        model_params = self.model(samples)
+        # assert self.trained, 'You need to train the network before predicting'
+        # assert(isinstance(samples, Variable)), 'samples must be in torch Variable'
+        # assert samples.size()[1] == self.model.ndims, 'samples must be 2D matrix with (batch_size, ndims)'
+        # model_params = self.model(samples)
 
 
 class PytorchUnivariateMoG:
@@ -195,12 +193,14 @@ class UnivariateMogMDN(nn.Module):
         self.tanh = nn.Tanh()
         self.alpha_out = torch.nn.Sequential(
               nn.Linear(n_hidden, n_components),
-              nn.Softmax(dim=0)
+              nn.Softmax(dim=1)
             )
         self.logsigma_out = nn.Linear(n_hidden, n_components)
         self.mu_out = nn.Linear(n_hidden, n_components)
 
     def forward(self, x):
+        # make sure the first dimension is at least singleton
+        assert x.dim() >= 2
         out = self.fc_in(x)
         act = self.tanh(out)
         out_alpha = self.alpha_out(act)
@@ -294,11 +294,17 @@ class ClassificationSingleLayerMDN(nn.Module):
         self.m_out = nn.Linear(n_hidden, ndim_output)
 
         self.loss = nn.CrossEntropyLoss()
-        self.softmax = nn.Softmax(dim=0)
+        # the softmax is taken over the second dimension, given that the input x is (n_samples, n_features)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
+        # make sure x has n samples in rows and features in columns: x is (n_samples, n_features)
+        assert x.dim() == 2, 'the input should be 2D: (n_samples, n_features)'
         out = self.fc_in(x)
         act = self.tanh(out)
-        out_m = self.m_out(act)
+        out_m = self.softmax(self.m_out(act))
 
         return out_m
+
+    def predict(self, x):
+        pass
