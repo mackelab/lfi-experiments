@@ -702,13 +702,7 @@ def generate_poisson_nb_data_set(n_samples, sample_size, prior_lam, prior_k, pri
     x = np.vstack((x1, x2))
 
     # define model indices
-    m = np.hstack((np.zeros(x1.shape[0]), np.ones(x2.shape[0]))).squeeze().astype(int)
-
-    # shuffle data
-    shuffle_indices = np.arange(n_samples)
-    np.random.shuffle(shuffle_indices)
-    x = x[shuffle_indices,]
-    m = m[shuffle_indices].tolist()
+    m = np.hstack((np.zeros(x1.shape[0]), np.ones(x2.shape[0]))).squeeze().astype(int).tolist()
 
     return x, m
 
@@ -749,7 +743,7 @@ def get_mog_posterior(model, stats_o, thetas):
     (out_alpha, out_sigma, out_mu) = model(Variable(torch.Tensor(stats_o)))
 
     n_thetas = thetas.size
-    n_components = out_mu.size()[0]
+    n_batch, n_components = out_mu.size()
 
     # get parameters in torch format
     torch_thetas = Variable(torch.Tensor(thetas)).unsqueeze(1)

@@ -9,9 +9,12 @@ class LotkaVolterraModel(BaseSimulator):
         self.T = T
         self.init = init
 
-    def gen_single(self, params):
+    def gen_single(self, params, log=True):
+        if log:
+            params = np.exp(params)
+
         lv = mjp.LotkaVolterra(self.init, params)
 
-        states = lv.sim_time(self.dt, self.T)
+        states = lv.sim_time(self.dt, self.T).T
 
         return { 'data' : np.asarray(states) }

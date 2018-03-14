@@ -52,7 +52,7 @@ class MarkovJumpProcess:
 
         return times, np.array(states)
 
-    def sim_time(self, dt, duration, max_n_steps=float('inf')):
+    def sim_time(self, dt, duration, max_n_steps=float('1e5')):
         """Simulates the process with the gillespie algorithm for a specified time duration."""
 
         num_rec = int(duration / dt) + 1
@@ -76,9 +76,11 @@ class MarkovJumpProcess:
                 reaction = np.random.choice(len(rates), p = (rates / total_rate))
                 self._do_reaction(reaction)
 
+                if self.state[0] == 0 and self.state[1] >= 1e5:
+                    states[i:] = float('nan')
+                    return states
+
                 n_steps += 1
-                if n_steps > max_n_steps:
-                    raise SimTooLongException(max_n_steps)
 
             states[i] = self.state.copy()
             cur_time += dt

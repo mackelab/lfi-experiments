@@ -7,12 +7,12 @@ from delfi.neuralnet.NeuralNet import NeuralNet
 from delfi.neuralnet.Trainer import Trainer
 from delfi.neuralnet.loss.regularizer import svi_kl_zero
 
-from mogtrain import MoGTrainer, DefensiveDistribution
+from mogtrain import MoGTrainer, DefensiveDistribution, CroppedDistribution
 
 class DDELFI(BaseInference):
     def __init__(self, generator, obs, prior_norm=False, pilot_samples=100,
                  n_components=1, reg_lambda=0.01, seed=None, verbose=True,
-                 prior_mixin=0, **kwargs):
+                 convert_to_T = None, prior_mixin=0, **kwargs):
         """Conditional density estimation likelihood-free inference (CDE-LFI)
 
         Implementation of algorithms 1 and 2 of Papamakarios and Murray, 2016.
@@ -53,11 +53,13 @@ class DDELFI(BaseInference):
         """
         super().__init__(generator, prior_norm=prior_norm,
                          pilot_samples=pilot_samples, seed=seed,
+                         n_components=n_components,
                          verbose=verbose, **kwargs)
 
         self.n_components = n_components
         self.obs = obs
         self.prior_mixin = prior_mixin
+        self.convert_to_T = convert_to_T
 
         if np.any(np.isnan(self.obs)):
             raise ValueError("Observed data contains NaNs")
@@ -133,9 +135,13 @@ class DDELFI(BaseInference):
                     posterior = super().predict(self.obs)
                     
                 proposal = posterior
+                if self.convert_to_T is not None:
+                    proposal = proposal.convert_to_T(dofs=self.convert_to_T)
+                    
                 if self.prior_mixin != 0:
                     proposal = DefensiveDistribution(proposal, self.generator.prior, alpha=self.prior_mixin, seed=self.gen_newseed())
                 
+                proposal = CroppedDistribution(proposal, self.generator.prior)
                 self.generator.proposal = proposal
 
             # number of training examples for this round
@@ -146,6 +152,14 @@ class DDELFI(BaseInference):
                     n_train_round = n_train[-1]
             else:
                 n_train_round = n_train
+
+            if type(epochs) in (list,tuple):
+                try:
+                    epochs_round = epochs[r-1]
+                except IndexError:
+                    epochs_round = epochs[-1]
+            else:
+                epochs_round = epochs
 
             # draw training data (z-transformed params and stats)
             verbose = '(round {}) '.format(r) if self.verbose else False
@@ -180,7 +194,7 @@ class DDELFI(BaseInference):
                         trn_data=trn_data, trn_inputs=trn_inputs,
                         monitor=self.monitor_dict_from_names(monitor),
                         seed=self.gen_newseed(), **trn_kwargs)
-            logs.append(t.train(epochs=epochs, minibatch=minibatch,
+            logs.append(t.train(epochs=epochs_round, minibatch=minibatch,
                                 verbose=verbose))
             trn_datasets.append(trn_data)
             
@@ -199,7 +213,6 @@ class DDELFI(BaseInference):
         x : array
             Stats for which to compute the posterior
         """
-        
         if self.generator.proposal is None:
             # no correction necessary
             return { 'posterior' : super().predict(x) }  # via super
