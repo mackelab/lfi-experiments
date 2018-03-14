@@ -7,7 +7,7 @@ from delfi.neuralnet.NeuralNet import NeuralNet
 from delfi.neuralnet.Trainer import Trainer
 from delfi.neuralnet.loss.regularizer import svi_kl_zero
 
-from mogtrain import MoGTrainer, DefensiveDistribution
+from mogtrain import MoGTrainer, DefensiveDistribution, CroppedDistribution
 
 class DDELFI(BaseInference):
     def __init__(self, generator, obs, prior_norm=False, pilot_samples=100,
@@ -53,6 +53,7 @@ class DDELFI(BaseInference):
         """
         super().__init__(generator, prior_norm=prior_norm,
                          pilot_samples=pilot_samples, seed=seed,
+                         n_components=n_components,
                          verbose=verbose, **kwargs)
 
         self.n_components = n_components
@@ -140,6 +141,7 @@ class DDELFI(BaseInference):
                 if self.prior_mixin != 0:
                     proposal = DefensiveDistribution(proposal, self.generator.prior, alpha=self.prior_mixin, seed=self.gen_newseed())
                 
+                proposal = CroppedDistribution(proposal, self.generator.prior)
                 self.generator.proposal = proposal
 
             # number of training examples for this round
@@ -211,7 +213,6 @@ class DDELFI(BaseInference):
         x : array
             Stats for which to compute the posterior
         """
-        
         if self.generator.proposal is None:
             # no correction necessary
             return { 'posterior' : super().predict(x) }  # via super
