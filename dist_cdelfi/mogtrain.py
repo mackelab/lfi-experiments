@@ -275,6 +275,11 @@ class MoGTrainer:
             for step in progress:
                 optim.zero_grad()
                 loss = self.get_loss()
+                
+                if np.any(np.isnan(loss.data.numpy())):
+                    import pdb
+                    pdb.set_trace()
+                    
                 loss.backward()      
                 optim.step()
 
@@ -365,3 +370,35 @@ def divide_dists(a, b, norm_region):
         return a / b
     
     return DividedPdf(a, b, norm_region)
+
+class CroppedDistribution(dd.BaseDistribution.BaseDistribution):
+    def __init__(self, base_dist, ref_dist, nsamples=10000):
+        self.base_dist = base_dist
+        self.ref_dist = ref_dist
+        self.nsamples = nsamples
+
+        self.Z = 1
+        samples = self.gen(nsamples)
+        self.Z = np.mean(self.eval(samples, log=False))
+
+        samples = self.gen(nsamples)
+    
+    def eval(self, samples, log=True):
+        if log:
+            return self.base_dist.eval(samples, log=True) + np.log(self.mask(samples)) - np.log(self.Z)
+        else:
+            return self.base_dist.eval(samples, log=False) * self.mask(samples) / self.Z
+
+    def gen(self, n_samples, n_reps=1):
+        ret = self.base_dist.gen(n_samples)
+        mask = ~self.mask(ret)
+
+        while np.any(mask):
+            ret[mask] = self.base_dist.gen(np.count_nonzero(mask))
+            mask = ~self.mask(ret)
+
+        return ret
+        
+    def mask(self, samples):
+        return self.ref_dist.eval(samples, log=False) != 0
+      
