@@ -378,10 +378,8 @@ class CroppedDistribution(dd.BaseDistribution.BaseDistribution):
         self.nsamples = nsamples
 
         self.Z = 1
-        samples = self.gen(nsamples)
-        self.Z = np.mean(self.eval(samples, log=False))
-
-        samples = self.gen(nsamples)
+        samples = self.ref_dist.gen(nsamples)
+        self.Z = np.mean(self.eval(samples, log=False) / self.ref_dist.eval(samples, log=False))
     
     def eval(self, samples, log=True):
         if log:
