@@ -37,7 +37,7 @@ class MoG(nn.Module):
         self.mus = nn.Parameter(
             torch.Tensor(n_components, dim).normal_().type(self.dtype))
         self.Lvecs = nn.Parameter(
-            torch.Tensor(int(n_components*((dim**2+dim)/2))).uniform_(0, 0.1).type(self.dtype))
+            torch.Tensor(n_components * (dim**2+dim) // 2).uniform_(0, 0.1).type(self.dtype))
     
     def eval(self, data):
         """Evaluate MoG at data points
@@ -131,6 +131,8 @@ class MoG(nn.Module):
         if not isinstance(target, dd.MoG):
             raise TypeError("Cannot initialise trainable MoG to non-MoG target distribution")
             
+        assert self.dim == target.ndim, "Cannot initialise trainable MoG to target distribution of wrong dimension"
+            
         if target.ncomp != self.n_components:
             raise TypeError("Cannot initialise trainable MoG to MoG target distribution with different number of components")
         
@@ -147,7 +149,7 @@ class MoG(nn.Module):
         
         
 class MoGTrainer:
-    def __init__(self, prop, prior, qphi, ncomponents, nsamples, lr=0.02, es_rounds=1000, es_thresh=0, dtype=dtype, init_to_qphi=True):
+    def __init__(self, prop, prior, qphi, n_components, nsamples, lr=0.01, es_rounds=1000, es_thresh=0, dtype=dtype, init_to_qphi=True):
         """ Train a MoG to fit uncorrected posterior
         
         Parameters
@@ -177,9 +179,12 @@ class MoGTrainer:
         self.qphi = qphi
         
         self.ndim = prior.ndim
+        
+        assert self.ndim == prop.ndim and self.ndim == qphi.ndim
+        
         self.dtype = dtype
         
-        self.mog = MoG(n_components=ncomponents, dim=self.ndim, dtype=dtype)
+        self.mog = MoG(n_components=n_components, dim=self.ndim, dtype=dtype)
         
         self.redraw_samples(nsamples)
         
@@ -211,6 +216,10 @@ class MoGTrainer:
         logterm_fixed_ = torch.from_numpy(self.llsamples_prop - self.llsamples_prior - self.llsamples_qphi)
         self.logterm_fixed = Variable(logterm_fixed_.type(self.dtype), requires_grad=False)
         
+        samples = self.qphi.gen(n_samples=nsamples)
+        Z_prime = np.log(np.mean(self.prior.eval(self.samples, log=False)))
+        self.Z_prime = Variable(torch.from_numpy(np.array([Z_prime])).type(self.dtype), requires_grad=False)
+        
     def get_loss(self):
         """ Compute the loss function
         
@@ -226,12 +235,12 @@ class MoGTrainer:
         lsamples_pbeta = torch.exp(llsamples_pbeta)
         Z_beta = torch.mean(lsamples_pbeta)
 
-        eterm = torch.dot(lsamples_pbeta, logterm) / len(self.samples)
+        eterm = torch.mean(lsamples_pbeta * logterm)
 
-        loss = -torch.log(Z_beta) + eterm / Z_beta  
+        loss = -torch.log(Z_beta) + eterm / Z_beta + self.Z_prime
         return loss
         
-    def train(self, nsteps, lr=None, es_rounds=None, es_thresh=None):
+    def train(self, nsteps=-1, lr=None, es_rounds=None, es_thresh=None):
         """ Train MoG
         
         Parameters
@@ -276,6 +285,9 @@ class MoGTrainer:
                 optim.zero_grad()
                 loss = self.get_loss()
                 
+                if len(losses) != 0 and np.abs(np.asscalar(loss.data.numpy()) - losses[-1]) > 1e3:
+                    import pdb
+                    pdb.set_trace()
                 if np.any(np.isnan(loss.data.numpy())):
                     import pdb
                     pdb.set_trace()
@@ -373,9 +385,9 @@ def divide_dists(a, b, norm_region):
 
 class CroppedDistribution(dd.BaseDistribution.BaseDistribution):
     def __init__(self, base_dist, ref_dist, nsamples=10000):
+        super().__init__(base_dist.ndim)
         self.base_dist = base_dist
         self.ref_dist = ref_dist
-        self.nsamples = nsamples
 
         self.Z = 1
         samples = self.ref_dist.gen(nsamples)

@@ -12,7 +12,8 @@ from mogtrain import MoGTrainer, DefensiveDistribution, CroppedDistribution
 class DDELFI(BaseInference):
     def __init__(self, generator, obs, prior_norm=False, pilot_samples=100,
                  n_components=1, reg_lambda=0.01, seed=None, verbose=True,
-                 convert_to_T = None, prior_mixin=0, **kwargs):
+                 convert_to_T=None, prior_mixin=0, 
+                 reinit_weights=False, **kwargs):
         """Conditional density estimation likelihood-free inference (CDE-LFI)
 
         Implementation of algorithms 1 and 2 of Papamakarios and Murray, 2016.
@@ -65,6 +66,7 @@ class DDELFI(BaseInference):
             raise ValueError("Observed data contains NaNs")
 
         self.reg_lambda = reg_lambda
+        self.reinit_weights = reinit_weights
 
     def loss(self, N):
         """Loss function for training
@@ -75,15 +77,6 @@ class DDELFI(BaseInference):
             Number of training samples
         """
         loss = -tt.mean(self.network.lprobs)
-
-        if self.svi:
-            kl, imvs = svi_kl_zero(self.network.mps, self.network.sps,
-                                   self.reg_lambda)
-            loss = loss + 1 / N * kl
-
-            # adding nodes to dict s.t. they can be monitored
-            self.observables['loss.kl'] = kl
-            self.observables.update(imvs)
 
         return loss
 
@@ -132,17 +125,23 @@ class DDELFI(BaseInference):
                 if len(posteriors) != 0:
                     posterior = posteriors[-1]
                 else:
-                    posterior = super().predict(self.obs)
+                    pred = self.compute_posterior(self.obs, **mog_kwargs)
+                    posterior = pred['posterior']
                     
                 proposal = posterior
-                if self.convert_to_T is not None:
+                if self.convert_to_T:
                     proposal = proposal.convert_to_T(dofs=self.convert_to_T)
                     
-                if self.prior_mixin != 0:
+                if self.prior_mixin:
                     proposal = DefensiveDistribution(proposal, self.generator.prior, alpha=self.prior_mixin, seed=self.gen_newseed())
                 
-                proposal = CroppedDistribution(proposal, self.generator.prior)
+                if isinstance(self.generator.prior, dd.Uniform) or isinstance(self.generator.prior, dd.LogUniform):
+                    proposal = CroppedDistribution(proposal, self.generator.prior)
+                    
                 self.generator.proposal = proposal
+                
+                if self.reinit_weights:
+                    self.reinit_network()
 
             # number of training examples for this round
             if type(n_train) == list:
@@ -164,27 +163,6 @@ class DDELFI(BaseInference):
             # draw training data (z-transformed params and stats)
             verbose = '(round {}) '.format(r) if self.verbose else False
             trn_data = self.gen(n_train_round, verbose=verbose)
-
-            # algorithm 2 of Papamakarios and Murray
-            if r == n_rounds and self.n_components > 1:
-                # get parameters of current network
-                old_params = self.network.params_dict.copy()
-
-                # create new network
-                network_spec = self.network.spec_dict.copy()
-                network_spec.update({'n_components': self.n_components})
-                self.network = NeuralNet(**network_spec)
-                new_params = self.network.params_dict
-
-                # set weights of new network
-                # weights of additional components are duplicates
-                for p in [s for s in new_params if 'means' in s or
-                          'precisions' in s]:
-                    new_params[p] = old_params[p[:-1] + '0']
-                    new_params[p] += 1.0e-6*self.rng.randn(*new_params[p].shape)
-
-                self.network.params_dict = new_params
-
             trn_inputs = [self.network.params, self.network.stats]
             
             mog_kwargs = { k[4:] : kwargs[k] for k in kwargs if k.startswith("mog_") }
@@ -222,7 +200,7 @@ class DDELFI(BaseInference):
             trainer = MoGTrainer(prop=self.generator.proposal, 
                                  prior=self.generator.prior, 
                                  qphi=qphi, 
-                                 ncomponents=self.n_components, 
+                                 n_components=self.n_components, 
                                  nsamples=nsamples, 
                                  **kwargs)
             
