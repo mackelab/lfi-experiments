@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import tqdm
 
 from torch.autograd import Variable
 from random import shuffle
@@ -548,6 +549,14 @@ def sample_poisson(prior, n_samples, sample_size):
 
 
 def sample_poisson_gamma_mixture(prior_k, prior_theta, n_samples, sample_size):
+    """
+    Generate samples from negative binomial distribution with specified priors.
+    :param prior_k: scipy.stats.gamma object with parameters set. prior on Gamma shape
+    :param prior_theta: scipy.stats.gamma object with parameters set. prior on Gamma scale
+    :param n_samples: number of data sets sampled
+    :param sample_size: number of samples per data set
+    :return: parameters, data_sets
+    """
     thetas = []
     samples = []
 
@@ -722,10 +731,10 @@ def calculate_nb_evidence(x, k_k, theta_k, k_theta, theta_theta, log=False):
     prior_theta = scipy.stats.gamma(a=k_theta, scale=theta_theta)
 
     (evidence, err) = scipy.integrate.dblquad(func=nb_evidence_integrant_direct,
-                                           a=theta_start / (1 + theta_start),
-                                           b=theta_end / (1 + theta_end),
-                                           gfun=lambda x: k_start, hfun=lambda x: k_end,
-                                           args=[x, prior_k, prior_theta])
+                                              a=theta_start / (1 + theta_start),
+                                              b=theta_end / (1 + theta_end),
+                                              gfun=lambda x: k_start, hfun=lambda x: k_end,
+                                              args=[x, prior_k, prior_theta])
 
     return np.log(evidence) if log else evidence
 
@@ -755,3 +764,386 @@ def get_mog_posterior(model, stats_o, thetas):
     post = univariate_mog_pdf(y=torch_thetas, sigmas=sigmas, mus=mus, alphas=alphas)
 
     return post
+
+
+def calculate_dkl(p, q):
+    """
+    Calculate dkl between p and q.
+    :param p: scipy stats object with .pdf() and .ppf() methods
+    :param q: delfi.distribution object with .eval() method
+    :return: dkl(p, q)
+    """
+    # parameter range
+    p_start = p.ppf(1e-9)
+    p_end = p.ppf(1 - 1e-9)
+
+    # integral function
+    def integrant(x):
+        log_pp = p.logpdf(x)
+        log_pq = q.eval(np.reshape(x, (1, -1)), log=True)
+        return np.exp(log_pp) * (log_pp - log_pq)
+
+    (dkl, err) = scipy.integrate.quad(integrant, a=p_start, b=p_end)
+    return dkl
+
+
+def calculate_credible_intervals_success(theta, ppf_fun, intervals, args=None):
+    """
+    Calculate credible intervals given a true parameter value and a percent point function of a distribution
+    :param theta: true parameter
+    :param ppf_fun: percent point function (inverse CDF)
+    :param intervals: array-like, credible intervals to be calculated
+    :param args: arguments to the ppf function
+    :return: a binary vector, same length as intervals, indicating whether the true parameter lies in that interval
+    """
+    tails = (1 - intervals) / 2
+
+    # get the boundaries of the credible intervals
+    lows, highs = ppf_fun(tails, *args), ppf_fun(1 - tails, *args)
+    success = np.ones_like(intervals) * np.logical_and(lows <= theta, theta <= highs)
+
+    return success
+
+
+def calculate_ppf_from_samples(qs, samples):
+    """
+    Given quantiles and samples, calculate values corresponding to the quantiles by approximating the
+    MoG inverse CDF from samples.
+    :param qs: quantiles, array-like
+    :param samples: number of samples used to for sampling
+    :return: corresponding values, array-like
+    """
+
+    qs = np.atleast_1d(qs)
+    values = np.zeros_like(qs)
+
+    # use bins from min to max
+    bins = np.linspace(samples.min(), samples.max(), 1000)
+    # asign samples to bins
+    bin_idx = np.digitize(samples, bins)
+    # count samples per bin --> histogram
+    n = np.bincount(bin_idx.squeeze())
+    # take the normalized cum sum as the cdf
+    cdf = np.cumsum(n) / np.sum(n)
+
+    # for every quantile, get the corresponding value on the cdf
+    for i, qi in enumerate(qs):
+        quantile_idx = np.where(cdf >= qi)[0][0]
+        values[i] = bins[quantile_idx]
+
+    return values
+
+
+def inverse_transform_sampling_1d(array, pdf_array, n_samples):
+    """
+    Generate samples from an arbitrary 1D distribution given an array of pdf values. Using inverse transform sampling.
+
+    Calculates CDF by summing up values in the PDF. Assumes values in array and PDF are spaced uniformly.
+
+    :param array: array of RV values covering a representative range
+    :param pdf_array: the corresponding PDF values of the values in 'array'.
+    :param n_samples: number of samples to generate
+    :return: array-like, array of pseudo-randomly generated sampled.
+    """
+    uniform_samples = scipy.stats.uniform.rvs(size=n_samples)
+    samples = np.zeros(n_samples)
+    # calculate the cdf by taking the cumsum and normaliying by dt
+    cdf = np.cumsum(pdf_array) * (array[1] - array[0])
+
+    for i, s in enumerate(uniform_samples):
+        # find idx in cmf
+        idx = np.where(cdf >= s)[0][0]
+        # add the corresponding value
+        samples[i] = array[idx]
+
+    return samples
+
+
+def inverse_transform_sampling_2d(x1, x2, joint_pdf, n_samples):
+    """
+    Generate samples from an arbitrary 2D distribution f(x, y) given a matrix of joint density values.
+
+    Using 2D inverse transform sampling: Calculate the marginal p(x1) and the condition p(x2 | x1). Generate
+    pseudo random samples from the x1 marginal. Then generate pseudo-random samples from the conditional, each sample
+    conditioned on a x1 sample of the previos step.
+    :param x1: values of RV x1
+    :param x2: values of RV x2
+    :param joint_pdf: 2D array of PDF values corresponding to the bins defined in x1 and x2
+    :param n_samples: number of samples to draw
+    :return: np array with samples (n_samples, 2)
+    """
+
+    # calculate marginal of x1 by integrating over x2
+    x1_pdf = np.trapz(joint_pdf, x=x2, axis=1)
+
+    # sample from marginal
+    samples_x1 = inverse_transform_sampling_1d(x1, x1_pdf, n_samples)
+
+    # calculate the conditional of x2 given x1 using Bayes rule
+    # this gives a matrix of pdf, one for each values of x1 that we condition on.
+    x2_pdf = np.zeros_like(joint_pdf)
+    # condition on every x1
+    for i in range(x1.size):
+        # conditioned on this x1, apply Bayes
+        x2_pdf[i,] = joint_pdf[i, :] / x1_pdf[i]
+
+    # get the cdf by summing along x2 dimension
+    x2_cdf = np.cumsum(x2_pdf, axis=1) * (x2[1] - x2[0])
+
+    # sample new uniform numbers
+    uniform_samples = scipy.stats.uniform.rvs(size=n_samples)
+
+    samples_x2 = []
+    for uni_sample, x1_sample in zip(uniform_samples, samples_x1):
+        # get the index of the x1 sample for conditioning
+        idx_x1 = np.where(x1 >= x1_sample)[0][0]
+        # find idx in conditional cmf
+        idx_u = np.where(x2_cdf[idx_x1,] >= uni_sample)[0][0]
+
+        # add the corresponding value
+        samples_x2.append(x2[idx_u])
+
+    return np.vstack((samples_x1, np.array(samples_x2))).T
+
+
+class NBExactPosterior:
+    """
+    Class for the exact NB posterior. Defined by observed data and priors on k and theta, the shape and scale of the
+    Gamma distribution in the Poisson-Gamma mixture.
+
+    Has methods to calculate the exact posterior in terms of a joint pdf matrix using numerical integration.
+    And methods to evaluate and to generate samples under this pdf.
+
+    Once the posterior is calculated and samples are generated, it has properties mean and std to be compared to the
+    predicted posterior.
+    """
+
+    def __init__(self, x, prior_k, prior_theta):
+        """
+        Instantiate the posterior with data and priors. the actual posterior has to be calculate using
+        calculate_exact_posterior()
+        :param x: observed data, array of counts
+        :param prior_k: scipy.stats.gamma object
+        :param prior_theta: scipy.stats.gamma object
+        """
+
+        # set flags
+        self.samples_generated = False  # whether mean and std are defined
+        self.calculated = False  # whether exact solution has been calculated
+
+        self.xo = x
+        self.prior_k = prior_k
+        self.prior_th = prior_theta
+
+        # prelocate
+        self.evidence = None
+        self.joint_pdf = None
+        self.joint_cdf = None
+        self.ks = None
+        self.thetas = None
+
+        self.samples = []
+
+    def calculat_exact_posterior(self, n_samples=200, prec=1e-4, verbose=True):
+        """
+        Calculate the exact posterior.
+        :param n_samples: the number of entries per dimension on the joint_pdf grid
+        :param prec: precision for the range of prior values
+        :return: No return
+        """
+
+        # if not calculated
+        if not self.calculated:
+            self.calculated = True
+            # set up a grid
+            self.ks = np.linspace(self.prior_k.ppf(prec), self.prior_k.ppf(1 - prec), n_samples)
+            self.thetas = np.linspace(self.prior_th.ppf(prec), self.prior_th.ppf(1 - prec), n_samples)
+
+            joint_pdf = np.zeros((self.ks.size, self.thetas.size))
+
+            # calculate likelihodd times prior for every grid value
+            with tqdm.tqdm(total=self.ks.size * self.thetas.size, desc='calculating posterior',
+                           disable=not verbose) as pbar:
+
+                for i, k in enumerate(self.ks):
+                    for j, th in enumerate(self.thetas):
+                        r = k
+                        p = th / (1 + th)
+                        joint_pdf[i, j] = nb_evidence_integrant_direct(r, p, self.xo, self.prior_k, self.prior_th)
+                        pbar.update()
+
+            # calculate the evidence as the integral over the grid of likelihood * prior values
+            self.evidence = np.trapz(np.trapz(joint_pdf, x=self.thetas, axis=1), x=self.ks, axis=0)
+            self.joint_pdf = joint_pdf / self.evidence
+
+            # calculate cdf
+            # Calculate CDF by taking cumsum on each axis
+            s1 = np.cumsum(np.cumsum(self.joint_pdf, axis=0), axis=1)
+            s2 = np.cumsum(np.cumsum(self.joint_pdf, axis=1), axis=0)
+            # approximate cdf by sum times dt
+            dts = (self.ks[1] - self.ks[0]) * (self.thetas[1] - self.thetas[0])
+            self.joint_cdf = (s1 + s2) / 2 * dts
+        else:
+            print('already done')
+
+    def eval(self, x, log=False):
+        """
+        Evaluate the joint pdf for value pairs given in x.
+        :param x: np.array, shape (n, 2)
+        :return: pdf values, np array, shape (n, )
+        """
+        assert self.calculated, 'calculate the joint posterior first using calculate_exaxt_posterior'
+        assert x.ndim == 2, 'x should have two dimensions, (n_samples, 2)'
+        assert x.shape[1] == 2, 'each datum should have two entries, [k, theta]'
+
+        pdf_values = []
+        # for each pair of (k, theta)
+        for xi in x:
+            # look up indices in the ranges
+            idx_k = np.where(self.ks >= xi[0])
+            idx_th = np.where(self.thetas >= xi[1])
+
+            # take corresponding pdf values from pdf grid
+            pdf_values.append(self.joint_pdf[idx_k, idx_th])
+
+        return np.log(np.array(pdf_values)) if log else np.array(pdf_values)
+
+    # to mimic scipy.stats behavior
+    def pdf(self, x):
+        """
+        Evaluate pdf at x
+        :param x: samples
+        :return: density values
+        """
+        return self.eval(x)
+
+    def logpdf(self, x):
+        """
+        Evaluate log density at x
+        :param x: samples
+        :return: log density
+        """
+        return self.eval(x, log=True)
+
+    def ppf(self, q):
+        """
+        Percent point function at q, or inverse CDF. Approximated by looking up the index in the cdf table
+        that is closest to q.
+        :param q: quantile
+        :return: corresponding value on the RV range
+        """
+        q = np.atleast_1d(q)
+
+        # look up the index of the quantile in the 2D CDF grid
+        values = []
+        for qi in q:
+            # find index in grid for every dimension
+            idx1, idx2 = np.where(self.joint_cdf >= qi)
+            values.append([self.ks[idx1[0]], self.thetas[idx2[0]]])
+
+        return np.array(values)
+
+    def gen(self, n_samples):
+        """
+        Generate samples under the joint pdf grid using inverse transform sampling
+        :param n_samples:
+        :return:
+        """
+
+        assert self.calculated, 'calculate the joint posterior first using calculate_exaxt_posterior'
+        self.samples_generated = True
+
+        # generate new samples
+        samples = inverse_transform_sampling_2d(self.ks, self.thetas, self.joint_pdf, n_samples).tolist()
+
+        # add to list of all samples
+        self.samples += samples
+
+        return np.array(self.samples)
+
+    @property
+    def mean(self):
+        assert self.samples_generated, 'generate samples first, using gen()'
+        return np.mean(self.samples, axis=0).reshape(-1)
+
+    @property
+    def std(self):
+        assert self.samples_generated, 'generate samples first, using gen()'
+        return np.sqrt(np.diag(np.cov(np.array(self.samples).T))).reshape(-1)
+
+
+class Distribution:
+    """
+    Class for arbitrary distribution defined in terms of an array of pdf values. Used for representing the marginals
+    of the numerically calculated NB posterior.
+    """
+
+    def __init__(self, support_array, pdf_array):
+
+        self.support = support_array
+        self.pdf_array = pdf_array
+
+        self.cdf_array = np.cumsum(self.pdf_array) * (self.support[1] - self.support[0])
+
+    def eval(self, x, log=False):
+
+        pdf_values = []
+        # for each sample
+        for xi in x:
+            # look up index in the supported range
+            idx_i = np.where(self.support >= xi)
+
+            # take corresponding pdf value from pdf
+            pdf_values.append(self.pdf_array[idx_i])
+
+        return np.log(np.array(pdf_values)) if log else np.array(pdf_values)
+
+    def pdf(self, x):
+        return self.eval(x)
+
+    def logpdf(self, x):
+        return self.eval(x, log=True)
+
+    def gen(self, n_samples):
+        """
+        Generate samples under the pdf using inverse transform sampling
+        :param n_samples:
+        :return: array-like, samples
+        """
+        return inverse_transform_sampling_1d(self.support, self.pdf_array, n_samples=n_samples)
+
+    def ppf(self, qs):
+        """
+        Percent point function at q, or inverse CDF. Approximated by looking up the index in the cdf table
+        that is closest to q.
+        :param q: quantile
+        :return: corresponding value on the RV range
+        """
+        q = np.atleast_1d(qs)
+
+        # look up the index of the quantile in the 2D CDF grid
+        values = []
+        for q in qs:
+            # find index in grid for every dimension
+            idx1 = np.where(self.cdf_array >= q)[0][0]
+            values.append(self.support[idx1])
+
+        return np.array(values)
+
+    def cdf(self, xs):
+        """
+        Evaluate CDF at every x in xs. Approximated by looking up the index in the cdf array.
+        :param xs: RV values to evaluate
+        :return: quantiles in [0, 1]
+        """
+        # make it an array in case it is a scalar.
+        xs = np.atleast_1d(xs)
+
+        cdf_values = []
+        for xi in xs:
+            # look up index in the support array
+            idx = np.where(self.support >= xi)[0][0]
+            # get the corresponding quantile
+            cdf_values.append(self.cdf_array[idx])
+
+        return np.array(cdf_values)

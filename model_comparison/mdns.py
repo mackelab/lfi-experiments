@@ -2,10 +2,11 @@ import numpy as np
 import scipy.stats
 import torch
 import torch.nn as nn
+import tqdm
 
 import delfi.distribution as dd
 from torch.autograd import Variable
-from model_comparison.utils import multivariate_normal_pdf, my_log_sum_exp, batch_generator
+from model_comparison.utils import *
 
 
 class Trainer:
@@ -30,24 +31,24 @@ class Trainer:
 
         loss_trace = []
 
-        for epoch in range(n_epochs):
-            bgen = batch_generator(dataset_train, n_minibatch)
+        with tqdm.tqdm(total=n_epochs, disable=not self.verbose,
+                       desc='training') as pbar:
+            for epoch in range(n_epochs):
+                bgen = batch_generator(dataset_train, n_minibatch)
 
-            for j, (x_batch, y_batch) in enumerate(bgen):
-                x_var = Variable(torch.Tensor(x_batch))
-                y_var = Variable(self.target_type(y_batch))
+                for j, (x_batch, y_batch) in enumerate(bgen):
+                    x_var = Variable(torch.Tensor(x_batch))
+                    y_var = Variable(self.target_type(y_batch))
 
-                model_params = self.model(x_var)
-                loss = self.model.loss(model_params, y_var)
+                    model_params = self.model(x_var)
+                    loss = self.model.loss(model_params, y_var)
 
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
 
-                loss_trace.append(loss.data.numpy())
-
-            if (epoch + 1) % 100 == 0 and self.verbose:
-                print("[epoch %04d] loss: %.4f" % (epoch + 1, loss.data[0]))
+                    loss_trace.append(loss.data.numpy())
+                pbar.update()
 
         self.loss_trace = loss_trace
 
@@ -105,11 +106,16 @@ class PytorchUnivariateMoG:
 
         return result
 
-    def eval_numpy(self, samples):
+    def eval_numpy(self, samples, log=False):
+        """
+
+        :param samples: array-like in shape (1, n_samples)
+        :param log: if true, log pdf are returned
+        :return: pdf values, (1, n_samples)
+        """
         # eval existing posterior for some params values and return pdf values in numpy format
 
-        sample_shape = samples.shape[:-1]
-        p_samples = np.zeros(sample_shape)
+        p_samples = np.zeros_like(samples)
 
         # for every component
         for k in range(self.n_components):
@@ -117,9 +123,36 @@ class PytorchUnivariateMoG:
             mean = self.mus[0, k].data.numpy()
             sigma = self.sigmas[0, k].data.numpy()
             # add to result, weighted with alpha
-            p_samples += alpha * scipy.stats.norm.pdf(x=samples, mean=mean, scale=sigma)
+            p_samples += alpha * scipy.stats.norm.pdf(x=samples, loc=mean, scale=sigma)
 
-        return p_samples
+        if log:
+            return np.log(samples)
+        else:
+            return p_samples
+
+    def gen(self, n_samples):
+        """
+        Generate samples from the MoG.
+        :param n_samples:
+        :return:
+        """
+
+        # get the number of samples per component, according to mixture weights alpha
+        ns = np.random.multinomial(n_samples, pvals=self.alphas.data.numpy().squeeze())
+
+        # sample for each component
+        samples = []
+        for k, n in enumerate(ns):
+            # construct scipy object
+            mean = self.mus[0, k].data.numpy()
+            sigma = self.sigmas[0, k].data.numpy()
+            # add samples to list
+            samples += scipy.stats.norm.rvs(loc=mean, scale=sigma, size=n).tolist()
+
+        # shuffle and return
+        np.random.shuffle(samples)
+
+        return np.array(samples)
 
     @staticmethod
     def normal_pdf(y, mus, sigmas, log=True):
@@ -135,7 +168,31 @@ class PytorchUnivariateMoG:
         :param q: the quantile value, e.g., .95, .5 etc.
         :return: the parameter value, e.g., the value corresponding to q amount of mass
         """
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    def calculate_credible_interval_counts(self, theta_o, intervals):
+        """
+        Credible interval count for theta_o.
+
+        For a given theta_o and a list of credible intervals, check whether theta_o falls into the interval, for each
+        interval. Return a binary vector indicating success
+        :param theta_o: float
+        :param intervals: np array
+        :return: np array, shape as intervals.
+        """
+
+        # for each interval. intervals are defined in mass. we need the tails, left and right of the interval
+        tails = (1 - intervals) / 2.
+
+        # generate samples to approximate the inverse cdf
+        samples = self.gen(10000)
+        print(samples.shape)
+
+        lows = calculate_ppf_from_samples(tails, samples)
+        highs = calculate_ppf_from_samples(1 - tails, samples)
+        counts = np.ones_like(intervals) * np.logical_and(lows <= theta_o, theta_o <= highs)
+
+        return counts
 
     def get_quantile(self, x):
         """
@@ -173,6 +230,14 @@ class PytorchUnivariateMoG:
             m += (self.alphas[:, k] * self.mus[:, k]).data.numpy().squeeze()
 
         return m
+
+    @property
+    def std(self):
+        """
+        Scale of MoG
+        :return:
+        """
+        return np.sum([self.alphas[0][k] * self.sigmas[0][k] for k in range(self.n_components)]).data.numpy().squeeze()
 
     def get_dd_object(self):
         """
@@ -229,14 +294,32 @@ class PytorchUnivariateGaussian:
 class PytorchMultivariateMoG:
 
     def __init__(self, mus, Us, alphas):
+        """
+        Set up a MoG in PyTorch. ndims is the number of dimensions of the Gaussian
+        :param mus: PyTorch Variable of shape (n_samples, ndims, ncomponents)
+        :param Us: PyTorch Variable of shape (n_samples, ncomponents, ndims, ndims)
+        :param alphas: PyTorch Variable of shape (n_samples, ncomponents)
+        """
 
         assert isinstance(mus, Variable), 'all inputs need to be pytorch Variable objects'
+        assert isinstance(Us, Variable), 'all inputs need to be pytorch Variable objects'
+        assert isinstance(alphas, Variable), 'all inputs need to be pytorch Variable objects'
 
         self.mus = mus
         self.Us = Us
         self.alphas = alphas
 
         self.nbatch, self.ndims, self.n_components = mus.size()
+
+    @property
+    def mean(self):
+        """
+        Mean of the MoG
+        """
+        mean = 0
+        for k in range(self.n_components):
+            mean += (self.alphas[:, k] * self.mus[:, :, k]).data.numpy().squeeze()
+        return mean
 
     def pdf(self, y, log=True):
         # get params: batch size N, ndims D, ncomponents K
@@ -264,8 +347,7 @@ class PytorchMultivariateMoG:
     def eval_numpy(self, samples):
         # eval existing posterior for some params values and return pdf values in numpy format
 
-        sample_shape = samples.shape[:-1]
-        p_samples = np.zeros(sample_shape)
+        p_samples = np.zeros(samples.shape)
 
         # for every component
         for k in range(self.n_components):
@@ -274,7 +356,7 @@ class PytorchMultivariateMoG:
             U = self.Us[0, k,].data.numpy()
             # get cov from Choleski transform
             cov = np.linalg.inv(U.T.dot(U))
-                # add to result, weighted with alpha
+            # add to result, weighted with alpha
             p_samples += alpha * scipy.stats.multivariate_normal.pdf(x=samples, mean=mean, cov=cov)
 
         return p_samples
@@ -284,14 +366,138 @@ class PytorchMultivariateMoG:
         Get the delfi.distribution object
         :return: delfi.distribution.mixture.MoG object
         """
-        a = self.alphas.data.numpy().squeeze()
-        ms = self.mus.data.numpy().reshape(self.n_components, self.ndims).tolist()
-        Us = self.Us.data.numpy().reshape(self.n_components, self.ndims, self.ndims).tolist()
 
+        a = []
+        ms = []
+        Us = []
+        # for every component, add the alphas, means and Cholesky transform U of P to lists
+        for k in range(self.n_components):
+            a.append(self.alphas[:, k].data.numpy()[0])
+            ms.append(self.mus[:, :, k].data.numpy().squeeze())
+            Us.append(self.Us[:, k, :, :].data.numpy().squeeze())
+
+        # delfi MoG takes lists over components as arguments
         return dd.mixture.MoG(a=a, ms=ms, Us=Us)
+
+    def get_quantile(self, x):
+        """
+        For sample(s) x calculate the corresponding quantiles. Calculate quantiles of individual Gaussians using scipy
+        and then take the weighted sum over components.
+        :param x: shape (n_samples, ndims), at least (1, ndims)
+        :return:
+        """
+        # if x is a scalar, make it an array
+        x = np.atleast_1d(x)
+        # make sure x is 1D
+        assert x.ndim == 2, 'the input array should be 2D, (n_samples, ndims)'
+        assert x.shape[1] == self.ndims, 'the number of entries per sample should be ndims={}'.format(self.ndims)
+
+        # the quantile of the MoG is the weighted sum of the quantiles of the Gaussians
+        # for every component
+        quantiles = np.zeros(x.shape[0])
+        for k in range(self.n_components):
+            alpha = self.alphas[:, k].data.numpy()[0]
+            mean = self.mus[:, :, k].data.numpy().squeeze()
+            U = self.Us[:, k, :, :].data.numpy().squeeze()
+            # get cov from Choleski transform
+            C = np.linalg.inv(U.T)
+            S = np.dot(C.T, C)
+            # add to result, weighted with alpha
+            quantiles += alpha * scipy.stats.multivariate_normal.cdf(x=x, mean=mean, cov=S)
+
+        return quantiles
+
+    def get_quantile_per_variable(self, x):
+        """
+        Calculate the quantile of each parameter component in x, under the corresponding marginal of that component.
+
+        :param x: (n_samples, ndims), ndims is the number of variables the MoG is defined for, e.g., k and theta,
+        :return: quantile for every sample and for every variable of the MoG, (n_samples, ndims).
+        """
+        # for each variable, get the marginal and take the quantile weighted over components
+
+        quantiles = np.zeros_like(x)
+
+        for k in range(self.n_components):
+            alpha = self.alphas[:, k].data.numpy()[0]
+            mean = self.mus[:, :, k].data.numpy().squeeze()
+            U = self.Us[:, k, :, :].data.numpy().squeeze()
+            # get cov from Choleski transform
+            C = np.linalg.inv(U.T)
+            # covariance matrix
+            S = np.dot(C.T, C)
+
+            # for each variable
+            for vi in range(self.ndims):
+                # the marginal is a univariate Gaussian with the sub mean and covariance
+                marginal = scipy.stats.norm(loc=mean[vi], scale=np.sqrt(S[vi, vi]))
+                # the quantile under the marginal of vi for this component, for all n_samples
+                q = marginal.cdf(x=x[:, vi])
+                # take sum, weighted with component weight alpha
+                quantiles[:, vi] += alpha * q
+
+        return quantiles
+
+    def get_marginals(self):
+        """
+        Return a list of PytorchUnivariateMoG holding the marginals of this PytorchMultivariateMoG.
+        :return: list
+        """
+        assert self.nbatch == 1, 'this defined only for a single data point MoG'
+        sigmas = np.zeros((self.ndims, self.n_components))
+        # get sigma for every component
+        for k in range(self.n_components):
+            U = self.Us[:, k, :, :].data.numpy().squeeze()
+            # get cov from Choleski transform
+            C = np.linalg.inv(U.T)
+            # covariance matrix
+            S = np.dot(C.T, C)
+            # the diagonal element is the variance of each variable, take sqrt to get std.
+            sigmas[:, k] = np.sqrt(np.diag(S))
+
+        # for each variable
+        marginals = []
+        for vi in range(self.ndims):
+            # take the corresponding mean component, the sigma component extracted above. for all MoG compoments.
+            m = self.mus[:, vi, :]
+            std = Variable(torch.Tensor(sigmas[vi,].reshape(1, -1)))
+            marg = PytorchUnivariateMoG(mus=m, sigmas=std, alphas=self.alphas)
+            marginals.append(marg)
+
+        return marginals
+
+    def gen(self, n_samples):
+        """
+        Generate samples from the MoG.
+        :param n_samples:
+        :return:
+        """
+
+        # get the number of samples per component, according to mixture weights alpha
+        ns = np.random.multinomial(n_samples, pvals=self.alphas.data.numpy().squeeze())
+
+        # sample for each component
+        samples = []
+        for k, n in enumerate(ns):
+            # construct scipy object
+            mean = self.mus[:, :, k].data.numpy().squeeze()
+            U = self.Us[:, k, :, :].data.numpy().squeeze()
+            # get cov from Choleski transform
+            C = np.linalg.inv(U.T)
+            S = np.dot(C.T, C)
+
+            # add samples to list
+            samples += scipy.stats.multivariate_normal.rvs(mean=mean, cov=S, size=n).tolist()
+
+        # shuffle and return
+        np.random.shuffle(samples)
+
+        return samples
+
 
 
 class UnivariateMogMDN(nn.Module):
+
     def __init__(self, ndim_input=2, n_hidden=5, n_components=3):
         super(UnivariateMogMDN, self).__init__()
         self.fc_in = nn.Linear(ndim_input, n_hidden)
