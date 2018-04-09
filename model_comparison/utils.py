@@ -8,7 +8,7 @@ from random import shuffle
 from scipy.stats import gamma, beta, nbinom, poisson
 import scipy
 import scipy.integrate
-from scipy.special import gammaln, betaln
+from scipy.special import gammaln, betaln, digamma
 import matplotlib.pyplot as plt
 import os
 
@@ -766,6 +766,46 @@ def get_mog_posterior(model, stats_o, thetas):
     return post
 
 
+def calculate_gamma_dkl(k1, theta1, k2, theta2):
+    return (k1 - k2) * digamma(k1) - gammaln(k1) + gammaln(k2) + \
+           k2 * (np.log(theta2) - np.log(theta1)) + k1 * (theta1 - theta2) / theta2
+
+
+def calculate_dkl_1D_scipy(p_pdf_array, q_pdf_array):
+    """
+    Calculate DKL from array of pdf values.
+
+    The arrays should cover as much of the range as possible.
+    :param p_pdf_array:
+    :param q_pdf_array:
+    :return:
+    """
+    return scipy.stats.entropy(pk=p_pdf_array, qk=q_pdf_array)
+
+
+def calculate_dkl_monte_carlo(x, p_pdf, q_pdf):
+    """
+    Estimate the DKL between 1D RV p and q.
+
+    :param x: samples from p
+    :param p_pdf: pdf function for p
+    :param q_pdf: pdf function for q
+    :return: estimate of dkl, standard error
+    """
+
+    # eval those under p and q
+    pp = p_pdf(x)
+    pq = q_pdf(x)
+
+    # estimate expectation of log
+    log = np.log(pp) - np.log(pq)
+    dkl = log.mean()
+    # estimate the standard error
+    stderr = log.std(ddof=1) / np.sqrt(x.shape[0])
+
+    return dkl, stderr
+
+
 def calculate_dkl(p, q):
     """
     Calculate dkl between p and q.
@@ -803,6 +843,20 @@ def calculate_credible_intervals_success(theta, ppf_fun, intervals, args=None):
     success = np.ones_like(intervals) * np.logical_and(lows <= theta, theta <= highs)
 
     return success
+
+
+def check_credible_regions(theta_o, cdf_fun, credible_regions):
+
+    q = cdf_fun(theta_o)
+
+    if q > 0.5:
+        # the mass in the CR is 1 - how much mass is above times 2
+        cr_mass = 1 - 2 * (1 - q)
+    else:
+        # or 1 - how much mass is below, times 2
+        cr_mass = 1 - 2 * q
+    counts = np.ones_like(credible_regions) * (credible_regions > cr_mass)
+    return counts
 
 
 def calculate_ppf_from_samples(qs, samples):
@@ -882,13 +936,17 @@ def inverse_transform_sampling_2d(x1, x2, joint_pdf, n_samples):
     # calculate the conditional of x2 given x1 using Bayes rule
     # this gives a matrix of pdf, one for each values of x1 that we condition on.
     x2_pdf = np.zeros_like(joint_pdf)
+    x2_cdf = np.zeros_like(joint_pdf)
     # condition on every x1
     for i in range(x1.size):
         # conditioned on this x1, apply Bayes
-        x2_pdf[i,] = joint_pdf[i, :] / x1_pdf[i]
-
-    # get the cdf by summing along x2 dimension
-    x2_cdf = np.cumsum(x2_pdf, axis=1) * (x2[1] - x2[0])
+        px1 = x1_pdf[i] if x1_pdf[i] > 0. else 1e-12
+        x2_pdf[i, ] = joint_pdf[i, :] / px1
+        # get the corresponding cdf by cumsum and normalization
+        x2_cdf[i, ] = np.cumsum(x2_pdf[i,])
+        x2_cdf[i, ] /= np.max(x2_cdf[i,])
+        assert np.isclose(x2_cdf[i, 0], 0, atol=1e-5), 'cdf should go from 0 to 1, {}'.format(x2_cdf[i, 0])
+        assert np.isclose(x2_cdf[i, -1], 1, atol=1e-5), 'cdf should go from 0 to 1, {}'.format(x2_cdf[i, 0])
 
     # sample new uniform numbers
     uniform_samples = scipy.stats.uniform.rvs(size=n_samples)
@@ -944,9 +1002,10 @@ class NBExactPosterior:
 
         self.samples = []
 
-    def calculat_exact_posterior(self, n_samples=200, prec=1e-4, verbose=True):
+    def calculat_exact_posterior(self, theta_o, n_samples=200, prec=1e-6, verbose=True):
         """
         Calculate the exact posterior.
+        :param theta_o: the true parameter theta
         :param n_samples: the number of entries per dimension on the joint_pdf grid
         :param prec: precision for the range of prior values
         :return: No return
@@ -955,9 +1014,18 @@ class NBExactPosterior:
         # if not calculated
         if not self.calculated:
             self.calculated = True
-            # set up a grid
-            self.ks = np.linspace(self.prior_k.ppf(prec), self.prior_k.ppf(1 - prec), n_samples)
-            self.thetas = np.linspace(self.prior_th.ppf(prec), self.prior_th.ppf(1 - prec), n_samples)
+            # set up a grid. take into account the true theta value to cover the region around it in the posterior
+            # get the quantiles of the true theto under the prior
+            k_pos = self.prior_k.cdf(theta_o[0])
+            th_pos = self.prior_th.cdf(theta_o[1])
+
+            # set the tail around it,
+            tail = 0.8
+            # choose ranges such that there are enough left and right of the true theta, use prec for bounds
+            self.ks = np.linspace(self.prior_k.ppf(np.max((prec, k_pos - tail))),
+                                  self.prior_k.ppf(np.min((1 - prec, k_pos + tail))), n_samples)
+            self.thetas = np.linspace(self.prior_th.ppf(np.max((prec, th_pos - tail))),
+                                      self.prior_th.ppf(np.min((1 - prec, th_pos + tail))), n_samples)
 
             joint_pdf = np.zeros((self.ks.size, self.thetas.size))
 
@@ -979,10 +1047,8 @@ class NBExactPosterior:
             # calculate cdf
             # Calculate CDF by taking cumsum on each axis
             s1 = np.cumsum(np.cumsum(self.joint_pdf, axis=0), axis=1)
-            s2 = np.cumsum(np.cumsum(self.joint_pdf, axis=1), axis=0)
-            # approximate cdf by sum times dt
-            dts = (self.ks[1] - self.ks[0]) * (self.thetas[1] - self.thetas[0])
-            self.joint_cdf = (s1 + s2) / 2 * dts
+            # approximate cdf by summation and normalization
+            self.joint_cdf = s1 / s1.max()
         else:
             print('already done')
 
@@ -992,6 +1058,8 @@ class NBExactPosterior:
         :param x: np.array, shape (n, 2)
         :return: pdf values, np array, shape (n, )
         """
+
+        x = np.atleast_1d(x)
         assert self.calculated, 'calculate the joint posterior first using calculate_exaxt_posterior'
         assert x.ndim == 2, 'x should have two dimensions, (n_samples, 2)'
         assert x.shape[1] == 2, 'each datum should have two entries, [k, theta]'
@@ -1000,8 +1068,8 @@ class NBExactPosterior:
         # for each pair of (k, theta)
         for xi in x:
             # look up indices in the ranges
-            idx_k = np.where(self.ks >= xi[0])
-            idx_th = np.where(self.thetas >= xi[1])
+            idx_k = np.where(self.ks >= xi[0])[0][0]
+            idx_th = np.where(self.thetas >= xi[1])[0][0]
 
             # take corresponding pdf values from pdf grid
             pdf_values.append(self.joint_pdf[idx_k, idx_th])
@@ -1043,6 +1111,21 @@ class NBExactPosterior:
 
         return np.array(values)
 
+    def cdf(self, x):
+
+        x = np.atleast_1d(x)
+        qs = []
+
+        for xi in x:
+            # find idx of x on the cdf grid
+            idx_k = np.where(self.ks >= xi[0])[0][0]
+            idx_th = np.where(self.thetas >= xi[1])[0][0]
+
+            # get value from cdf
+            qs.append(self.joint_cdf[idx_k, idx_th])
+
+        return np.array(qs)
+
     def gen(self, n_samples):
         """
         Generate samples under the joint pdf grid using inverse transform sampling
@@ -1054,22 +1137,40 @@ class NBExactPosterior:
         self.samples_generated = True
 
         # generate new samples
-        samples = inverse_transform_sampling_2d(self.ks, self.thetas, self.joint_pdf, n_samples).tolist()
+        samples = inverse_transform_sampling_2d(self.ks, self.thetas, self.joint_pdf, n_samples)
 
         # add to list of all samples
-        self.samples += samples
+        self.samples += samples.tolist()
 
-        return np.array(self.samples)
+        return samples
+
+    def rvs(self, n_samples):
+        return self.gen(n_samples)
 
     @property
     def mean(self):
-        assert self.samples_generated, 'generate samples first, using gen()'
+        if len(self.samples) == 0:
+            self.gen(1000)
         return np.mean(self.samples, axis=0).reshape(-1)
 
     @property
     def std(self):
-        assert self.samples_generated, 'generate samples first, using gen()'
+        if len(self.samples) == 0:
+            self.gen(1000)
         return np.sqrt(np.diag(np.cov(np.array(self.samples).T))).reshape(-1)
+
+    @property
+    def cov(self):
+        if len(self.samples) == 0:
+            self.gen(1000)
+        return np.cov(np.array(self.samples).T)
+
+    def get_marginals(self):
+
+        k_pdf = np.trapz(self.joint_pdf, x=self.thetas, axis=1)
+        th_pdf = np.trapz(self.joint_pdf, x=self.ks, axis=0)
+
+        return [Distribution(self.ks, k_pdf), Distribution(self.thetas, th_pdf)]
 
 
 class Distribution:
@@ -1083,7 +1184,9 @@ class Distribution:
         self.support = support_array
         self.pdf_array = pdf_array
 
-        self.cdf_array = np.cumsum(self.pdf_array) * (self.support[1] - self.support[0])
+        self.cdf_array = np.cumsum(self.pdf_array)
+        self.cdf_array /= self.cdf_array.max()
+        self.samples = []
 
     def eval(self, x, log=False):
 
@@ -1091,7 +1194,7 @@ class Distribution:
         # for each sample
         for xi in x:
             # look up index in the supported range
-            idx_i = np.where(self.support >= xi)
+            idx_i = np.where(self.support >= xi)[0][0]
 
             # take corresponding pdf value from pdf
             pdf_values.append(self.pdf_array[idx_i])
@@ -1110,7 +1213,12 @@ class Distribution:
         :param n_samples:
         :return: array-like, samples
         """
-        return inverse_transform_sampling_1d(self.support, self.pdf_array, n_samples=n_samples)
+        # generate samples
+        samples = inverse_transform_sampling_1d(self.support, self.pdf_array, n_samples=n_samples)
+        # add to all samples
+        self.samples += samples.tolist()
+
+        return samples
 
     def ppf(self, qs):
         """
@@ -1147,3 +1255,72 @@ class Distribution:
             cdf_values.append(self.cdf_array[idx])
 
         return np.array(cdf_values)
+
+    def get_credible_interval_counts(self, th, credible_intervals):
+        # get the quantile of theta
+
+        q = self.cdf(th)
+
+        # q mass lies below th, therefore the CI is
+        if q > 0.5:
+            # for q > .5, 1 - how much mass is above q times 2 (2 tails)
+            ci = 1 - 2 * (1 - q)
+        else:
+            # how much mass is below, times 2 (2 tails)
+            ci = 1 - 2 * q
+        counts = np.ones_like(credible_intervals) * (credible_intervals>= ci)
+        return counts
+
+    @property
+    def mean(self):
+        """
+        Mean estimated from samples
+        :return:
+        """
+        if len(self.samples) == 0:
+            self.gen(1000)
+
+        return np.mean(self.samples)
+
+    @property
+    def std(self):
+        """
+        Mean estimated from samples
+        :return:
+        """
+        if len(self.samples) == 0:
+            self.gen(1000)
+
+        return np.std(self.samples)
+
+
+class JointGammaPrior:
+
+    def __init__(self, prior_k, prior_theta):
+
+        self.prior_k = prior_k
+        self.prior_theta = prior_theta
+
+    def gen(self, n_samples):
+
+        sk = self.prior_k.rvs(n_samples)
+        sth = self.prior_theta.rvs(n_samples)
+
+        return np.vstack((sk, sth)).reshape(n_samples, 2)
+
+    def pdf(self, samples):
+
+        samples = np.atleast_1d(samples)
+        assert samples.shape[1] == 2, 'samples should be (n_samples, 2)'
+
+        pk = self.prior_k.pdf(samples[:, 0])
+        pth = self.prior_theta.pdf(samples[:, 1])
+
+        return pk * pth
+
+    def rvs(self, n_samples):
+        return self.gen(n_samples)
+
+    def eval(self, samples):
+        return self.pdf(samples)
+

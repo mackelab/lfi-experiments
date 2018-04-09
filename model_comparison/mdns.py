@@ -170,28 +170,28 @@ class PytorchUnivariateMoG:
         """
         raise NotImplementedError()
 
-    def calculate_credible_interval_counts(self, theta_o, intervals):
+    def get_credible_interval_counts(self, theta_o, intervals):
         """
-        Credible interval count for theta_o.
+        Count whether a parameter falls in different credible intervals.
 
-        For a given theta_o and a list of credible intervals, check whether theta_o falls into the interval, for each
-        interval. Return a binary vector indicating success
-        :param theta_o: float
+        Counting is done without sampling. Just look up the quantile q of theta. Then q mass lies below theta. If q is
+        smaller than 0.5, then this is a tail and 1 - 2*tail is the CI. If q is greater than 0.5, then 1 - q is a tail
+        and 1 - 2*tail is the CI.
+        :param theta_o: parameter for which to calculate the CI counts, float
         :param intervals: np array
-        :return: np array, shape as intervals.
+        :return: np array of {0, 1} for counts
         """
+        # get the quantile of theta
+        q = self.get_quantile(theta_o)
 
-        # for each interval. intervals are defined in mass. we need the tails, left and right of the interval
-        tails = (1 - intervals) / 2.
-
-        # generate samples to approximate the inverse cdf
-        samples = self.gen(10000)
-        print(samples.shape)
-
-        lows = calculate_ppf_from_samples(tails, samples)
-        highs = calculate_ppf_from_samples(1 - tails, samples)
-        counts = np.ones_like(intervals) * np.logical_and(lows <= theta_o, theta_o <= highs)
-
+        # q mass lies below th, therefore the CI is
+        if q > 0.5:
+            # for q > .5, 1 - how much mass is above q times 2 (2 tails)
+            ci = 1 - 2 * (1 - q)
+        else:
+            # how much mass is below, times 2 (2 tails)
+            ci = 1 - 2 * q
+        counts = np.ones_like(intervals) * (intervals>= ci)
         return counts
 
     def get_quantile(self, x):
@@ -234,10 +234,18 @@ class PytorchUnivariateMoG:
     @property
     def std(self):
         """
-        Scale of MoG
+        Scale of MoG. Formular from
+        https://stats.stackexchange.com/questions/16608/what-is-the-variance-of-the-weighted-mixture-of-two-gaussians
         :return:
         """
-        return np.sum([self.alphas[0][k] * self.sigmas[0][k] for k in range(self.n_components)]).data.numpy().squeeze()
+        a = self.alphas[0, :].data.numpy()
+        vars = self.sigmas[0, :].data.numpy()**2
+        ms = self.mus[0, :].data.numpy()
+
+        var = np.sum([a[k] * (vars[k] + ms[k]**2) for k in range(self.n_components)]) - \
+              np.sum([a[k] * ms[k] for k in range(self.n_components)])**2
+
+        return np.sqrt(var)
 
     def get_dd_object(self):
         """
@@ -251,6 +259,20 @@ class PytorchUnivariateMoG:
 
         # set up dd MoG object
         return dd.mixture.MoG(a=a, ms=ms, Ss=Ss)
+
+    def ztrans_inv(self, mean, std):
+        """
+        Apply inverse z transform.
+        :param mean: original mean
+        :param std: original std
+        :return: PytorchUnivariateMoG with transformed means and stds
+        """
+
+        # apply same transform to every component
+        new_mus = self.mus * std + mean
+        new_sigmas = self.sigmas * std
+
+        return PytorchUnivariateMoG(new_mus, new_sigmas, self.alphas)
 
 
 class PytorchUnivariateGaussian:
@@ -309,6 +331,9 @@ class PytorchMultivariateMoG:
         self.Us = Us
         self.alphas = alphas
 
+        # prelocate covariance matrix for later calculation
+        self.Ss = None
+
         self.nbatch, self.ndims, self.n_components = mus.size()
 
     @property
@@ -320,6 +345,54 @@ class PytorchMultivariateMoG:
         for k in range(self.n_components):
             mean += (self.alphas[:, k] * self.mus[:, :, k]).data.numpy().squeeze()
         return mean
+
+    @property
+    def std(self):
+
+        if self.Ss is None:
+            Ss = self.get_Ss_from_Us()
+
+        S = self.get_covariance_matrix()
+
+        return np.sqrt(np.diag(S))
+
+    def get_covariance_matrix(self):
+        """
+        Calculate the overall covariance of the MoG.
+
+        The covariance of a set of RVs is the mean of the conditional covariances plus the covariances of
+        the conditional means.
+        The MoG is a weighted sum of Gaussian RVs. Therefore, the mean covariance are just the weighted sum of
+        component covariances, similar for the conditional means. See here for an explanantion:
+
+        https://math.stackexchange.com/questions/195911/covariance-of-gaussian-mixtures
+
+        :return: Overall covariance matrix
+        """
+        if self.Ss is None:
+            _ = self.get_Ss_from_Us()
+
+        assert self.nbatch == 1, 'covariance matrix is returned only for single batch sample, but ' \
+                                 'self.nbatch={}'.format(self.nbatch)
+
+        # assume single batch sample
+        batch_idx = 0
+        S = np.zeros((self.ndims, self.ndims))
+
+        a = self.alphas[batch_idx, :].data.numpy().squeeze()
+        mus = self.mus[batch_idx, :, :].data.numpy().squeeze()
+        ss = self.Ss[batch_idx, :, :, :].squeeze()
+
+        m = np.dot(a, mus.T)
+
+        # get covariance shifted by the means, weighted with alpha
+        for k in range(self.n_components):
+            S += a[k] * (ss[k, :, :] + np.outer(mus[:, k], mus[:, k]))
+
+        # subtract weighted means
+        S -= np.outer(m, m)
+
+        return S
 
     def pdf(self, y, log=True):
         # get params: batch size N, ndims D, ncomponents K
@@ -347,17 +420,18 @@ class PytorchMultivariateMoG:
     def eval_numpy(self, samples):
         # eval existing posterior for some params values and return pdf values in numpy format
 
-        p_samples = np.zeros(samples.shape)
+        p_samples = np.zeros(samples.shape[:-1])
 
         # for every component
         for k in range(self.n_components):
-            alpha = self.alphas[0, k].data.numpy()
-            mean = self.mus[0, :, k].data.numpy()
-            U = self.Us[0, k,].data.numpy()
+            alpha = self.alphas[:, k].data.numpy()[0]
+            mean = self.mus[:, :, k].data.numpy().squeeze()
+            U = self.Us[:, k, :, :].data.numpy().squeeze()
             # get cov from Choleski transform
-            cov = np.linalg.inv(U.T.dot(U))
+            C = np.linalg.inv(U).T
+            S = np.dot(C.T, C)
             # add to result, weighted with alpha
-            p_samples += alpha * scipy.stats.multivariate_normal.pdf(x=samples, mean=mean, cov=cov)
+            p_samples += alpha * scipy.stats.multivariate_normal.pdf(x=samples, mean=mean, cov=S)
 
         return p_samples
 
@@ -406,6 +480,28 @@ class PytorchMultivariateMoG:
             quantiles += alpha * scipy.stats.multivariate_normal.cdf(x=x, mean=mean, cov=S)
 
         return quantiles
+
+    def check_credible_regions(self, theta_o, credible_regions):
+        """
+        Count whether a parameter falls in different credible regions.
+
+        Counting is done without sampling. Just look up the quantile q of theta. Then q mass lies below theta. If q is
+        smaller than 0.5, then this is a tail and 1 - 2*tail is the CR. If q is greater than 0.5, then 1 - q is a tail
+        and 1 - 2*tail is the CR.
+        :param theta_o: parameter for which to calculate the CR counts, float
+        :param credible_regions: np array of masses that define the CR
+        :return: np array of {0, 1} for counts
+        """
+
+        q = self.get_quantile(theta_o.reshape(1, -1))
+        if q > 0.5:
+            # the mass in the CR is 1 - how much mass is above times 2
+            cr_mass = 1 - 2 * (1 - q)
+        else:
+            # or 1 - how much mass is below, times 2
+            cr_mass = 1 - 2 * q
+        counts = np.ones_like(credible_regions) * (credible_regions > cr_mass)
+        return counts
 
     def get_quantile_per_variable(self, x):
         """
@@ -460,7 +556,7 @@ class PytorchMultivariateMoG:
         for vi in range(self.ndims):
             # take the corresponding mean component, the sigma component extracted above. for all MoG compoments.
             m = self.mus[:, vi, :]
-            std = Variable(torch.Tensor(sigmas[vi,].reshape(1, -1)))
+            std = Variable(torch.Tensor(sigmas[vi, ].reshape(1, -1)))
             marg = PytorchUnivariateMoG(mus=m, sigmas=std, alphas=self.alphas)
             marginals.append(marg)
 
@@ -474,10 +570,12 @@ class PytorchMultivariateMoG:
         """
 
         # get the number of samples per component, according to mixture weights alpha
-        ns = np.random.multinomial(n_samples, pvals=self.alphas.data.numpy().squeeze())
+        ps = np.atleast_1d(self.alphas.data.numpy().squeeze())
+        ns = np.random.multinomial(n_samples, pvals=ps)
 
         # sample for each component
-        samples = []
+        samples = np.zeros((1, 2)) # hack for initialization
+        lower = 0
         for k, n in enumerate(ns):
             # construct scipy object
             mean = self.mus[:, :, k].data.numpy().squeeze()
@@ -487,13 +585,71 @@ class PytorchMultivariateMoG:
             S = np.dot(C.T, C)
 
             # add samples to list
-            samples += scipy.stats.multivariate_normal.rvs(mean=mean, cov=S, size=n).tolist()
+            ss = np.atleast_2d(scipy.stats.multivariate_normal.rvs(mean=mean, cov=S, size=n))
+            samples = np.vstack((samples, ss))
 
+        # remove hack
+        samples = samples[1:, :]
         # shuffle and return
         np.random.shuffle(samples)
 
         return samples
 
+    def get_Ss_from_Us(self):
+        """
+        Get the matrix of covariance matrices from the matrix of Cholesky transforms of the precision matrices.
+        :return:
+        """
+
+        # prelocate
+        Ss = np.zeros_like(self.Us.data.numpy())
+
+        # loop over batch
+        for d in range(self.nbatch):
+            # loop over components
+            for k in range(self.n_components):
+                # get the U matrix
+                U = self.Us[d, k, ].data.numpy()
+                # inverse the Cholesky transform to that of the covariance matrix
+                C = np.linalg.inv(U.T)
+                # get the covariance matrix from its Cholesky transform
+                Ss[d, k, ] = np.dot(C.T, C)
+
+        # set the matrix as attribute
+        self.Ss = Ss
+
+        return Ss
+
+    def ztrans_inv(self, mean, std):
+        """
+        Inverse ztransform.
+
+        Given a mean and std used for ztransform, return the PytorchMultivariateMoG holding the original location and
+        scale. Assumes that the current loc and scale of the indivudual Gaussian is close to 0, 1, i.e., that the
+        covariance matrix is a diagonal matrix.
+        Applies the transform to every component separately and keeps the alpha for the new MoG.
+
+        :param mean: mean of the original distribution
+        :param std: vector of standard deviations of the original distribution
+        :return: PytorchMultivariateMoG object with the original mean and variance.
+        """
+
+        mus = np.zeros((self.nbatch, self.ndims, self.n_components))
+        Us = np.zeros((self.nbatch, self.n_components, self.ndims, self.ndims))
+
+        Ssz = self.get_Ss_from_Us()
+
+        # for every component
+        for d in range(self.nbatch):
+            for k in range(self.n_components):
+                mus[d, :, k] = std * self.mus[d, :, k].data.numpy() + mean
+                S = np.outer(std, std) * Ssz[d, k,]
+                Sin = np.linalg.inv(S)
+                U = np.linalg.cholesky(Sin).T
+                Us[d, k,] = U
+
+        return PytorchMultivariateMoG(Variable(torch.Tensor(mus.tolist())),
+                                      Variable(torch.Tensor(Us.tolist())), self.alphas)
 
 
 class UnivariateMogMDN(nn.Module):
@@ -604,11 +760,11 @@ class MultivariateMogMDN(nn.Module):
         U_mat = Variable(torch.zeros(batch_size, self.n_components, self.ndims, self.ndims))
 
         # assign vector to upper triangle of U
-        (idx1, idx2) = np.triu_indices(self.ndims)
-        U_mat[:, :, idx1, idx2] = U_vec
+        (idx1, idx2) = np.triu_indices(self.ndims)  # get indices of upper triangle, including diagonal
+        U_mat[:, :, idx1, idx2] = U_vec  # assign vector elements to upper triangle
         # apply exponential to get positive diagonal
-        (idx1, idx2) = np.diag_indices(self.ndims)
-        U_mat[:, :, idx1, idx2] = torch.exp(U_mat[:, :, idx1, idx2])
+        (idx1, idx2) = np.diag_indices(self.ndims)  # get indices of diagonal elements
+        U_mat[:, :, idx1, idx2] = torch.exp(U_mat[:, :, idx1, idx2])  # apply exponential to diagonal
 
         return out_mu, U_mat, out_alpha
 

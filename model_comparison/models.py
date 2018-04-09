@@ -46,6 +46,7 @@ class BaseModel:
 class PoissonModel(BaseModel):
     def __init__(self, dim_param=1, sample_size=10, n_workers=1, seed=None):
         super().__init__(dim_param=dim_param, sample_size=sample_size, n_workers=n_workers, seed=seed)
+        self.posterior = None
 
     def gen_single(self, params):
         # in multiprocessing the parameter vector additionally contains a seed
@@ -73,7 +74,29 @@ class PoissonModel(BaseModel):
         scale_post = 1. / (sample_size + theta ** -1)
 
         # return gamma posterior
-        return scipy.stats.gamma(a=k_post, scale=scale_post)
+        self.posterior = scipy.stats.gamma(a=k_post, scale=scale_post)
+        return self.posterior
+
+    def get_mle_posterior(self, n_samples):
+        """
+        Sample from the exact posterior a lot and use the sample for a MLE estimate of the same posterior.
+
+        Used for estimating a baseline for the DKL between the exact and the predicted posterior.
+        :param n_samples:
+        :return:
+        """
+        assert self.posterior is not None, 'you first have to calculate the exact posterior given observed data'
+
+        # sample from exact posterior
+        x = self.posterior.rvs(n_samples)
+
+        # use mle estimate from wikipedia:
+        s = np.log(x.mean()) - np.log(x).mean()
+        k = (3 - s + np.sqrt((s - 3) ** 2 + 24 * s)) / (12 * s)
+        theta = np.sum(x) / (x.size * k)
+
+        # return corresponding gamma posterior
+        return scipy.stats.gamma(a=k, scale=theta)
 
 
 class NegativeBinomialModel(BaseModel):
@@ -96,18 +119,18 @@ class NegativeBinomialModel(BaseModel):
 
         return sample
 
-    def get_exact_posterior(self, x_obs, prior_k, prior_theta):
+    def get_exact_posterior(self, x_obs, prior_k, prior_theta, prec=1e-5, n_samples=200):
         """
-        Get the exact posterior by numerical integration given the observed data and the priors
+        Get the exact posterior by numerical integration given the observed data and the priors.
+
         :param x_obs: observed data, array of counts
         :param prior_k: scipy.stats.gamma object
         :param prior_theta: scipy.stats.gamma object
+        :param prec: lower and upper tails in the coverage of the priors
+        :param n_samples: number of sample points along each dimension of the grid
+
         :return: NBExactPosterior object with calculated posterior and samples
         """
+        # set up the posterior
         post = NBExactPosterior(x_obs, prior_k, prior_theta)
-        # calculate posterior
-        post.calculat_exact_posterior(verbose=False)
-        # generate a lot of samples to approximate the mean
-        samples = post.gen(10000)
-
-        return post
+        return post.calculat_exact_posterior(verbose=False, prec=prec, n_samples=n_samples)
