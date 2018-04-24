@@ -149,7 +149,7 @@ class MoG(nn.Module):
         
         
 class MoGTrainer:
-    def __init__(self, prop, prior, qphi, n_components, nsamples, lr=0.01, es_rounds=1000, es_thresh=0, dtype=dtype, init_to_qphi=True):
+    def __init__(self, prop, prior, qphi, n_components, nsamples, lr=0.01, es_rounds=300, es_thresh=0, dtype=dtype, init_to_qphi=True):
         """ Train a MoG to fit uncorrected posterior
         
         Parameters
@@ -210,6 +210,10 @@ class MoGTrainer:
         self.samples = self.prop.gen(n_samples=nsamples)
                      
         self.llsamples_prior = self.prior.eval(self.samples, log=True)
+        
+        if np.any(np.isinf(self.llsamples_prior)):
+            raise ValueError("Proposal is not restricted to support of the prior")
+            
         self.llsamples_prop = self.prop.eval(self.samples, log=True)
         self.llsamples_qphi = self.qphi.eval(self.samples, log=True)
     
@@ -292,7 +296,9 @@ class MoGTrainer:
                     import pdb
                     pdb.set_trace()
                     
-                loss.backward()      
+                loss.backward()
+                
+                last_data = (self.mog.weights.clone(), self.mog.mus.clone(), self.mog.Lvecs.clone())
                 optim.step()
 
                 progress.set_description("loss={}".format(loss.data.numpy()))
