@@ -23,7 +23,10 @@ class hh_evaluator(bpopt.evaluators.Evaluator):
         sum_stats = self.s.calc([states])
 
         # output with z-transformed stats
-        return np.ndarray.tolist(np.abs((sum_stats - self.obs_stats)/self.stats_std)[0])
+        diff_stats = np.ndarray.tolist(np.abs((sum_stats - self.obs_stats)/self.stats_std)[0])
+        
+        # replace NaNs by large number
+        return [100 if np.isnan(x) else x for x in diff_stats]
 
 
 def run_deap(model, bounds, labels_params, summary, obs_stats, labels_sum_stats,
