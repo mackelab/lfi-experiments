@@ -50,7 +50,7 @@ def probs2contours(probs, levels):
 def plot_multipdf(pdfs, lims=None, gt=None,
              resolution=500, labels_params=None, ticks=False, diag_only=False,
              diag_only_cols=4, diag_only_rows=4, figsize=(5, 5), fontscale=1,
-             partial=False,partial_ls=None, samples=None, col1='k', colrs=('c')):
+             partial=False,partial_ls=None, samples=None, col1='k', colrs=('c'),imageshow=True):
     """Plots marginals of a pdf, for each variable and pair of variables.
 
     Parameters
@@ -80,6 +80,8 @@ def plot_multipdf(pdfs, lims=None, gt=None,
         color 1
     col2 : list of str
         colors 2
+    imageshow : bool
+        If True, imshow is active
     """
 
     pdf1 = pdfs[-1]
@@ -117,12 +119,13 @@ def plot_multipdf(pdfs, lims=None, gt=None,
             ax.vlines(gt, 0, ax.get_ylim()[1], color='r')
 
         if ticks:
-            ax.get_yaxis().set_tick_params(which='both', direction='out')
+            #ax.get_yaxis().set_tick_params(which='both', direction='out')
             ax.get_xaxis().set_tick_params(which='both', direction='out')
             ax.set_xticks(np.linspace(lims[0, 0], lims[0, 1], 2))
-            ax.set_yticks(np.linspace(min(pp), max(pp), 2))
+            #ax.set_yticks(np.linspace(min(pp), max(pp), 2))
             ax.xaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.1f'))
-            ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.1f'))
+            #ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.1f'))
+            ax.get_yaxis().set_ticks([])
         else:
             ax.get_xaxis().set_ticks([])
             ax.get_yaxis().set_ticks([])
@@ -187,18 +190,23 @@ def plot_multipdf(pdfs, lims=None, gt=None,
                             gt[p_i], 0, ax[r, c].get_ylim()[1], color='r')
 
                     if ticks:
-                        ax[r, c].get_yaxis().set_tick_params(
-                            which='both', direction='out', labelsize=fontscale * 15)
+                        #ax[r, c].get_yaxis().set_tick_params(
+                        #    which='both', direction='out', labelsize=fontscale * 15)
                         ax[r, c].get_xaxis().set_tick_params(
                             which='both', direction='out', labelsize=fontscale * 15)
 #                         ax[r, c].locator_params(nbins=3)
                         ax[r, c].set_xticks(np.linspace(
                             lims[p_i, 0]+0.15*np.abs(lims[p_i, 0]-lims[p_j, 1]), lims[p_j, 1]-0.15*np.abs(lims[p_i, 0]-lims[p_j, 1]), 2))
-                        ax[r, c].set_yticks(np.linspace(0+0.15*np.abs(0-np.max(pp_ls)), np.max(pp_ls)-0.15*np.abs(0-np.max(pp_ls)), 2))
+                        #ax[r, c].set_yticks(np.linspace(0+0.15*np.abs(0-np.max(pp_ls)), np.max(pp_ls)-0.15*np.abs(0-np.max(pp_ls)), 2))
                         ax[r, c].xaxis.set_major_formatter(
                             mpl.ticker.FormatStrFormatter('%.1f'))
-                        ax[r, c].yaxis.set_major_formatter(
-                            mpl.ticker.FormatStrFormatter('%.1f'))
+                        if lims[p_j, 1]>1e3:
+                            ax[r, c].xaxis.set_major_formatter(
+                            mpl.ticker.FormatStrFormatter('%.0f'))
+                        
+                        #ax[r, c].yaxis.set_major_formatter(
+                        #    mpl.ticker.FormatStrFormatter('%.1f'))
+                        ax[r, c].get_yaxis().set_ticks([])
                     else:
                         ax[r, c].get_xaxis().set_ticks([])
                         ax[r, c].get_yaxis().set_ticks([])
@@ -248,9 +256,11 @@ def plot_multipdf(pdfs, lims=None, gt=None,
                         [X.reshape([-1, 1]), Y.reshape([-1, 1])], axis=1)
                     pp = pdf.eval(xy, ii=[p_i, p_j], log=False)
                     pp = pp.reshape(list(X.shape))
-                    ax[i, j].imshow(pp.T, origin='lower',
-                                        extent=[lims[p_j, 0], lims[p_j, 1], lims[p_i, 0], lims[p_i, 1]],
-                                        aspect='auto', interpolation='none')
+                    
+                    if imageshow==True:
+                        ax[i, j].imshow(pp.T, origin='lower',
+                                            extent=[lims[p_j, 0], lims[p_j, 1], lims[p_i, 0], lims[p_i, 1]],
+                                            aspect='auto', interpolation='none')
                     
                     for pdf,col in zip(pdfs[0:-1],colrs[0:-1]):
                         pp = pdf.eval(xy, ii=[p_i, p_j], log=False)
@@ -266,7 +276,10 @@ def plot_multipdf(pdfs, lims=None, gt=None,
 
                     ax[i, j].get_xaxis().set_ticks([])
                     ax[i, j].get_yaxis().set_ticks([])
-                    ax[i, j].set_axis_off()
+                    if imageshow==True:
+                        ax[i, j].set_axis_off()
+                    else:
+                        ax[i, j].set_axis_on()
 
                     x0, x1 = ax[i, j].get_xlim()
                     y0, y1 = ax[i, j].get_ylim()
@@ -285,7 +298,7 @@ def plot_multipdf(pdfs, lims=None, gt=None,
 def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=False, levels=(0.68, 0.95),
              resolution=500, labels_params=None, ticks=False, diag_only=False,
              diag_only_cols=4, diag_only_rows=4, figsize=(5, 5), fontscale=1,
-             partial=False, samples=None, col1='k', col2='b', col3='g'):
+             partial=False,partial_ls=None, samples=None, col1='k', col2='b', col3='g',col_samp=None):
     """Plots marginals of a pdf, for each variable and pair of variables.
 
     Parameters
@@ -310,6 +323,8 @@ def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=Fals
     partial: bool
         If True, plots partial posterior with at the most 3 parameters.
         Only available if `diag_only` is False
+    partial_ls: list of integers
+        Indices of parameters plotted if `partial` is set to True. Minimum of 3 indices.
     samples: array
         If given, samples of a distribution are plotted along `pdf`.
         If given, `pdf` is plotted with default `levels` (0.68, 0.95), if provided `levels` is None.
@@ -321,17 +336,20 @@ def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=Fals
         color 2
     col3 : str
         color 3 (for pdf2 if provided)
+    col_samp : list
+        If defined, colormap for samples provided in gt
     """
 
     pdfs = (pdf1, pdf2)
     colrs = (col2, col3)
     
-    col_min = 1
-    num_colors = 20+col_min
-    cm1 = mpl.cm.Reds
-    col_ibea = [cm1(1.*i/num_colors) for i in range(col_min,num_colors)]
-    col_ibea[0] = col_ibea[13]
-    col_ibea[1:] = [cm1(1.*6/num_colors) for i in range(col_min,num_colors)]
+    if col_samp is None:
+        col_min = 1
+        num_colors = 20+col_min
+        cm1 = mpl.cm.Reds
+        col_samp = [cm1(1.*i/num_colors) for i in range(col_min,num_colors)]
+        col_samp[0] = col_samp[13]
+        col_samp[1:] = [cm1(1.*6/num_colors) for i in range(col_min,num_colors)]
 
     if not (pdf1 is None or pdf2 is None):
         assert pdf1.ndim == pdf2.ndim
@@ -368,15 +386,16 @@ def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=Fals
         ax.set_ylim([0, ax.get_ylim()[1]])
         if gt is not None:
             for samp in range(len(gt[0])-1,-1,-1):
-                ax.vlines(gt[0][samp], 0, ax.get_ylim()[1], color=col_ibea[samp])
+                ax.vlines(gt[0][samp], 0, ax.get_ylim()[1], color=col_samp[samp])
 
         if ticks:
-            ax.get_yaxis().set_tick_params(which='both', direction='out')
+            #ax.get_yaxis().set_tick_params(which='both', direction='out')
             ax.get_xaxis().set_tick_params(which='both', direction='out')
             ax.set_xticks(np.linspace(lims[0, 0], lims[0, 1], 2))
-            ax.set_yticks(np.linspace(min(pp), max(pp), 2))
+            #ax.set_yticks(np.linspace(min(pp), max(pp), 2))
             ax.xaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.1f'))
-            ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.1f'))
+            #ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.1f'))
+            ax.get_yaxis().set_ticks([])
         else:
             ax.get_xaxis().set_ticks([])
             ax.get_yaxis().set_ticks([])
@@ -385,8 +404,8 @@ def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=Fals
 
         if not diag_only:
             if partial:
-                rows = min(3, pdf1.ndim)
-                cols = min(3, pdf1.ndim)
+                rows = min(max(3,len(partial_ls)), pdf1.ndim)
+                cols = min(max(3,len(partial_ls)), pdf1.ndim)
             else:
                 rows = pdf1.ndim
                 cols = pdf1.ndim
@@ -401,17 +420,24 @@ def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=Fals
 
         for i in range(rows):
             for j in range(cols):
+                
+                if partial and partial_ls is not None:
+                    p_i = partial_ls[i]
+                    p_j = partial_ls[j]
+                else:
+                    p_i = i
+                    p_j = j
 
                 if i == j:
                     if samples is not None:
-                        ax[i, j].hist(samples[i, :], bins=100, normed=True,
+                        ax[i, j].hist(samples[p_i, :], bins=100, normed=True,
                                       color=col1,
                                       edgecolor=col1)
-                    xx = np.linspace(lims[i, 0], lims[i, 1], resolution)
+                    xx = np.linspace(lims[p_i, 0], lims[p_i, 1], resolution)
 
                     for pdf, col in zip(pdfs, colrs):
                         if pdf is not None:
-                            pp = pdf.eval(xx, ii=[i], log=False)
+                            pp = pdf.eval(xx, ii=[p_i], log=False)
 
                             if diag_only:
                                 c += 1
@@ -421,41 +447,46 @@ def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=Fals
 
                     for pdf, col in zip(pdfs, colrs):
                         if pdf is not None:
-                            pp = pdf.eval(xx, ii=[i], log=False)
+                            pp = pdf.eval(xx, ii=[p_i], log=False)
                             ax[r, c].plot(xx, pp, color=col)
 
-                    ax[r, c].set_xlim(lims[i])
+                    ax[r, c].set_xlim(lims[p_i])
                     ax[r, c].set_ylim([0, ax[r, c].get_ylim()[1]])
 
                     if gt is not None:
                         for samp in range(len(gt[0])-1,-1,-1):
                             ax[r, c].vlines(
-                                gt[i][samp], 0, ax[r, c].get_ylim()[1], color=col_ibea[samp])
+                                gt[p_i][samp], 0, ax[r, c].get_ylim()[1], color=col_samp[samp])
                         
                     if param1 is not None:
                         ax[r, c].vlines(
-                            param1[i], 0, ax[r, c].get_ylim()[1], color=(244/255, 152/255, 25/255))
+                            param1[p_i], 0, ax[r, c].get_ylim()[1], color=(244/255, 152/255, 25/255))
 
                     if ticks:
-                        ax[r, c].get_yaxis().set_tick_params(
-                            which='both', direction='out', labelsize=fontscale * 15)
+                        #ax[r, c].get_yaxis().set_tick_params(
+                        #    which='both', direction='out', labelsize=fontscale * 15)
                         ax[r, c].get_xaxis().set_tick_params(
                             which='both', direction='out', labelsize=fontscale * 15)
 #                         ax[r, c].locator_params(nbins=3)
                         ax[r, c].set_xticks(np.linspace(
-                            lims[i, 0]+0.15*np.abs(lims[i, 0]-lims[j, 1]), lims[j, 1]-0.15*np.abs(lims[i, 0]-lims[j, 1]), 2))
-                        ax[r, c].set_yticks(np.linspace(0+0.15*np.abs(0-max(pp)), max(pp)-0.15*np.abs(0-max(pp)), 2))
+                            lims[p_i, 0]+0.15*np.abs(lims[p_i, 0]-lims[p_j, 1]), lims[p_j, 1]-0.15*np.abs(lims[p_i, 0]-lims[p_j, 1]), 2))
+                        #ax[r, c].set_yticks(np.linspace(0+0.15*np.abs(0-max(pp)), max(pp)-0.15*np.abs(0-max(pp)), 2))
                         ax[r, c].xaxis.set_major_formatter(
                             mpl.ticker.FormatStrFormatter('%.1f'))
-                        ax[r, c].yaxis.set_major_formatter(
-                            mpl.ticker.FormatStrFormatter('%.1f'))
+                        if lims[p_j, 1]>1e3:
+                            ax[r, c].xaxis.set_major_formatter(
+                            mpl.ticker.FormatStrFormatter('%.0f'))
+                        
+                        #ax[r, c].yaxis.set_major_formatter(
+                        #    mpl.ticker.FormatStrFormatter('%.1f'))
+                        ax[r, c].get_yaxis().set_ticks([])
                     else:
                         ax[r, c].get_xaxis().set_ticks([])
                         ax[r, c].get_yaxis().set_ticks([])
 
                     if labels_params is not None:
                         ax[r, c].set_xlabel(
-                            labels_params[i], fontsize=fontscale * 20)
+                            labels_params[p_i], fontsize=fontscale * 20)
                     else:
                         ax[r, c].set_xlabel([])
 
@@ -486,34 +517,34 @@ def plot_pdf_multipts(pdf1, lims, pdf2=None, gt=None, param1=None, contours=Fals
 
                     if samples is not None:
                         H, xedges, yedges = np.histogram2d(
-                            samples[i, :], samples[j, :], bins=30, normed=True)
+                            samples[p_i, :], samples[p_j, :], bins=30, normed=True)
                         ax[i, j].imshow(H, origin='lower', extent=[
                                         yedges[0], yedges[-1], xedges[0], xedges[-1]])
 
-                    xx = np.linspace(lims[i, 0], lims[i, 1], resolution)
-                    yy = np.linspace(lims[j, 0], lims[j, 1], resolution)
+                    xx = np.linspace(lims[p_i, 0], lims[p_i, 1], resolution)
+                    yy = np.linspace(lims[p_j, 0], lims[p_j, 1], resolution)
                     X, Y = np.meshgrid(xx, yy)
                     xy = np.concatenate(
                         [X.reshape([-1, 1]), Y.reshape([-1, 1])], axis=1)
-                    pp = pdf.eval(xy, ii=[i, j], log=False)
+                    pp = pdf.eval(xy, ii=[p_i, p_j], log=False)
                     pp = pp.reshape(list(X.shape))
                     if contours:
                         ax[i, j].contour(Y, X, probs2contours(
                             pp, levels), levels, colors=('w', 'y'))
                     else:
                         ax[i, j].imshow(pp.T, origin='lower',
-                                        extent=[lims[j, 0], lims[j, 1], lims[i, 0], lims[i, 1]],
+                                        extent=[lims[p_j, 0], lims[p_j, 1], lims[p_i, 0], lims[p_i, 1]],
                                         aspect='auto', interpolation='none')
-                    ax[i, j].set_xlim(lims[j])
-                    ax[i, j].set_ylim(lims[i])
+                    ax[i, j].set_xlim(lims[p_j])
+                    ax[i, j].set_ylim(lims[p_i])
 
                     if gt is not None:
                         for samp in range(len(gt[0])-1,-1,-1):
-                            ax[i, j].plot(gt[j][samp], gt[i][samp],color=col_ibea[samp], marker='.',linestyle = 'none', ms=10,
+                            ax[i, j].plot(gt[p_j][samp], gt[p_i][samp],color=col_samp[samp], marker='.',linestyle = 'none', ms=10,
                                           markeredgewidth=0.0)
                     
                     if param1 is not None:
-                        ax[i, j].plot(param1[j], param1[i], '.', color=(244/255, 152/255, 25/255), ms=10,
+                        ax[i, j].plot(param1[p_j], param1[p_i], '.', color=(244/255, 152/255, 25/255), ms=10,
                                       markeredgewidth=0.0)
 
                     ax[i, j].get_xaxis().set_ticks([])
