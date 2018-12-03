@@ -1,6 +1,8 @@
 # Project specific
 results/
 results/*
+model_comparison/data/
+balancednetwork/.idea/
 
 # Notebook checkpoints
 .ipynb_checkpoints
