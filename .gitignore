@@ -2,7 +2,9 @@
 results/
 results/*
 model_comparison/data/
+model_comparison/figures/
 balancednetwork/.idea/
+.idea/
 
 # Notebook checkpoints
 .ipynb_checkpoints
