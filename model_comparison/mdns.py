@@ -803,9 +803,9 @@ class ClassificationMDN(nn.Module):
         self.n_hidden_layers = n_hidden_layers
 
         # define funs
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.LogSoftmax(dim=1)
         self.activation_fun = nn.Tanh()
-        self.loss = nn.CrossEntropyLoss()
+        self.loss = nn.NLLLoss()
 
         # define architecture
         # input layer takes features, expands to n_hidden units
@@ -842,7 +842,7 @@ class ClassificationMDN(nn.Module):
 
         assert x.dim() == 2, 'the input should be 2D: (n_samples, n_features)'
 
-        p_vec = self.forward(x)
+        p_vec = torch.exp(self.forward(x))
 
 
         return p_vec.data.numpy().squeeze()
