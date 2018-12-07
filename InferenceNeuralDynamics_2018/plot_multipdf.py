@@ -50,7 +50,7 @@ def probs2contours(probs, levels):
 def plot_multipdf(pdfs, lims=None, gt=None,
              resolution=500, labels_params=None, ticks=False, diag_only=False,
              diag_only_cols=4, diag_only_rows=4, figsize=(5, 5), fontscale=1,
-             partial=False,partial_ls=None, samples=None, col1='k', colrs=('c'),imageshow=True):
+             partial=False,partial_ls=None, samples=None, col1='k', colrs=('c'),alpha=1,imageshow=True):
     """Plots marginals of a pdf, for each variable and pair of variables.
 
     Parameters
@@ -179,7 +179,7 @@ def plot_multipdf(pdfs, lims=None, gt=None,
                     for pdf, col in zip(pdfs, colrs):
                         if pdf is not None:
                             pp = pdf.eval(xx, ii=[p_i], log=False)
-                            ax[r, c].plot(xx, pp, color=col)
+                            ax[r, c].plot(xx, pp,color=col,alpha=alpha)
                             pp_ls.append(pp)
 
                     ax[r, c].set_xlim(lims[p_i])
@@ -265,7 +265,7 @@ def plot_multipdf(pdfs, lims=None, gt=None,
                     for pdf,col in zip(pdfs[0:-1],colrs[0:-1]):
                         pp = pdf.eval(xy, ii=[p_i, p_j], log=False)
                         pp = pp.reshape(list(X.shape))
-                        ax[i, j].contour(Y, X, probs2contours(pp, levels), levels, colors=[col])
+                        ax[i, j].contour(Y, X, probs2contours(pp, levels), levels, colors=[col],alpha=alpha)
 
                     ax[i, j].set_xlim(lims[p_j])
                     ax[i, j].set_ylim(lims[p_i])
