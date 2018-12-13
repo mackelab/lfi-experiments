@@ -67,9 +67,6 @@ class Trainer:
 
 
 class PytorchUnivariateMoG:
-"""
-Pytorch class for univariate mixture of Gaussians.
-"""
     def __init__(self, mus, sigmas, alphas):
 
         assert isinstance(mus, Variable), 'all inputs need to be pytorch Variable objects'
