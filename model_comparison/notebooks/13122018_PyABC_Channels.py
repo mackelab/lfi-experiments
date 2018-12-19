@@ -77,9 +77,8 @@ sks = ChannelStats(channel_type='kslow', seed=seed)
 def model_1(parameters):
     params = np.array([parameters.p1, parameters.p2, parameters.p3, parameters.p4, 
                        parameters.p5, parameters.p6, parameters.p7, parameters.p8])
-    # x = mkd.gen(params.reshape(1, -1))
-    # sx = skd.calc(x[0])
-    sx = np.random.rand(1, 25)
+    x = mkd.gen(params.reshape(1, -1))
+    sx = skd.calc(x[0])
     sxdict = dict()
     for i, sxi in enumerate(sx.T):
         sxdict['y{}'.format(i)] = sxi[0]
@@ -88,9 +87,8 @@ def model_1(parameters):
 
 def model_2(parameters):
     params = np.array([parameters.p1, parameters.p2, parameters.p3, parameters.p4, parameters.p5])
-    # x = mks.gen(params.reshape(1, -1))
-    # sx = skd.calc(x[0])
-    sx = np.random.rand(1, 25)
+    x = mks.gen(params.reshape(1, -1))
+    sx = skd.calc(x[0])
     sxdict = dict()
     for i, sxi in enumerate(sx.T):
         sxdict['y{}'.format(i)] = sxi[0]
