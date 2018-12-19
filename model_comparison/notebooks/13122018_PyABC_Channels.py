@@ -50,12 +50,11 @@ seed = 2
 
 # In[3]:
 
-n_params = 2
 m_obs = ChannelSingle(channel_type='kd', n_params=8, cython=cython)
 s = ChannelStats(channel_type='kd')
 
 xo = m_obs.gen(GT['kd'].reshape(1,-1))
-sxo = s.calc(xo[0])[:, :n_params]
+sxo = s.calc(xo[0])
 
 
 # In[4]:
@@ -131,8 +130,8 @@ parameter_priors = [prior1, prior2]
 
 
 # We plug all the ABC options together
-n_measure_to_use = 1
-ss_measures = ['y{}'.format(i) for i in range(n_measure_to_use)]
+# n_measure_to_use = 25
+ss_measures = ['y{}'.format(i) for i in range(sxo.shape[1])]
 abc = ABCSMC(
     models, parameter_priors,
     PercentileDistanceFunction(measures_to_use=ss_measures), sampler=sampler.SingleCoreSampler())
@@ -178,20 +177,18 @@ for idx, y_observed in enumerate(sx_t):
 # In[ ]:
 
 
-n_simulations.mean()
+print(n_simulations.mean())
 
 
 # In[ ]:
+# dd = dict(phat=phat, nsims=n_simulations, mtrue=[m_obs, s, xo, sxo])
 
-
-dd = dict(phat=phat, nsims=n_simulations, ptrue=ptrue)
-
-import time
-time_stamp = time.strftime('%Y%m%d%H%M_')
-fn = os.path.join('../data/', time_stamp + '_SMCABC_results_PoissonNB_Ntest{}.p'.format(sx_t.shape[0]))
-
-with open(fn, 'wb') as outfile: 
-    pickle.dump(dd, outfile, protocol=pickle.HIGHEST_PROTOCOL)
+# import time
+# time_stamp = time.strftime('%Y%m%d%H%M_')
+# fn = os.path.join('../data/', time_stamp + '_SMCABC_results_PoissonNB_Ntest{}.p'.format(sx_t.shape[0]))
+#
+# with open(fn, 'wb') as outfile:
+#     pickle.dump(dd, outfile, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 # In[ ]:
