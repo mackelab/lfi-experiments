@@ -6,7 +6,7 @@ Note that [code](https://github.com/mackelab/delfi_int) development on APT (term
 The figure-generating notebooks ICML_figure_XY.ipynb load results from disk that were produced by the model-fitting and model-evaluating notebooks. 
 The figure-generating notebooks can still be run on the original fits and evaluation results used for the APT submission (if moved to the notebooks_apt/results/ subfolder), or you can use the _fit.ipynb and _eval.ipynb notebooks to generate more/new results.
 
-Apart from results produced with (private forks of) the [delfi](https://github.com/mackelab/delfi_int) package (and its surrounding repos [lfi-experiements](https://github.com/mackelab/lfi-experiments) and [lfi-models](https://github.com/mackelab/lfi-models)), the APT submission also heavily made use of a slightly modified version of the [SNL](https://github.com/gpapamak/snl) package to run multiple seeds of SNL, SNPE-A, SNPE-B and SMC-ABC (with Python 2!) on the Lotka-Volterra, M/G/1 and 'Gaussian' (SLCP) simulators originally used in the SNL publication. 
+Apart from results produced with (private forks of) the [delfi](https://github.com/mackelab/delfi_int) package (and its surrounding repos [lfi-experiements](https://github.com/mackelab/lfi-experiments) and [lfi-models](https://github.com/mackelab/lfi-models)), the APT submission also heavily made use of a slightly modified version of the [SNL](https://github.com/gpapamak/snl) package to run multiple seeds of SNL, SNPE-A, SNPE-B and SMC-ABC (with Python 2!) on the Lotka-Volterra, M/G/1 and 'Gaussian' (SLCP) simulators originally used in the SNL publication. These results are naturally not produced with the notebooks in this folder. 
 
 
 To reproduce individual figure, proceed as follows:
