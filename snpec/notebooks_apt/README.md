@@ -36,7 +36,7 @@ Remark: maximum mean discrepancies (MMDs) are stored as the *square* MMDs (see [
 
 ## SNL results
 
-The relevant SNL fork is found [here](https://github.com/mnonnenm/snl). See [here](https://github.com/gpapamak/snl/blob/master/README.md) for general usage of the package. All SNL results require a Python 2 environment! 
+The relevant SNL fork is found [here](https://github.com/mnonnenm/snl). See [here](https://github.com/gpapamak/snl/blob/master/README.md) for general usage of the package. SNL requires a Python 2 environment! 
 
 For the results of the APT submission, the main.py file used to run the experiments was [modified](https://github.com/mnonnenm/snl/blob/master/main.py#L50) to pass a user-controlled seed to the experiment runner. Use for instance as in
 
@@ -65,3 +65,4 @@ To recreate figure 8, run
 
 ``` python plot_results_lprob_all_mean_sd.py mg1 _validationset ```
 
+These commands will try to load results from disk. If run on experimental results other than the ones used for the original APT submission (e.g. more seeds, new specifiers for APT), make sure the expected files exist (check the [paths](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L450)), or just [out-comment](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L488) lines for non-existent results.
