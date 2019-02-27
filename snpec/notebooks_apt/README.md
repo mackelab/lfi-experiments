@@ -70,9 +70,9 @@ To recreate panel 4c, run
 
 To recreate figure 8, run
 
-``` python plot_results_dist_all_mean_sd.py mg1 _validationset ```
+``` python plot_results_dist_all_mean_sd.py mg1 _validationset_comb ```
 
-``` python plot_results_lprob_all_mean_sd.py mg1 _validationset ```
+``` python plot_results_lprob_all_mean_sd.py mg1 _validationset_comb ```
 
 
 These commands will try to load results from disk. 
