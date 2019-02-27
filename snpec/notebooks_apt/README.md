@@ -74,6 +74,6 @@ To recreate figure 8, run
 
 
 These commands will try to load results from disk. 
-If run on experimental results other than the ones used for the original APT submission (e.g. more seeds, new specifiers for APT), make sure the expected files exist (check respective paths for [SNL](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L94) and [APT](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L450) results), or just out-comment lines for non-existent results as e.g. [here](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L488).
+If run on experimental results other than the ones used for the original APT submission (e.g. more seeds, new specifiers for APT), make sure the expected files exist (check respective paths for [SNL](https://github.com/mnonnenm/snl/blob/master/plot_results_lprob_all_mean_sd.py#L72) and [APT](https://github.com/mnonnenm/snl/blob/master/plot_results_lprob_all_mean_sd.py#L451) results), or just out-comment lines for non-existent results as e.g. [here](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L488).
 
 When run for the first time on a new set of results, plot_results_ will first compute the respective performance metrics (neg. log-probs, distances, MMDs) and store those under data/results. This includes sampling long MCMC chains for SNL. Subsequent calls will also load performance metric results from disc.
