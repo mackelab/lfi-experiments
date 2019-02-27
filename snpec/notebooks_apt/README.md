@@ -47,7 +47,9 @@ For the results of the APT submission, the main.py file used to run the experime
 
 ``` python main.py run exps/lv_seq.txt43 ```
 
-which starts experiments with sequential algorithms (SNPE-A, SNPE-B and SNL) on the Lotka-Volterra simulator with seed=43. The last *two* letters of the shell command will be used as seed. Experiments reproduced for the APT paper were 'lv' (Lotka-Volterra), 'gauss' (SLCP) and 'mg1' (M/G/1) each with seeds 42 to 51 (i.e. 10 different seeds). 
+which starts experiments with sequential algorithms (SNPE-A, SNPE-B and SNL) on the Lotka-Volterra simulator with seed=43. The last *two* letters of the shell command will be used as seed. 
+
+Experiments reproduced for the APT paper were 'lv' (Lotka-Volterra), 'gauss' (SLCP) and 'mg1' (M/G/1) each with seeds 42 to 51 (i.e. 10 different seeds). 
 For SMC-ABC results on SLCP (panel 2c), additionally execute 
 ``` python main.py run exps/gauss_smc.txt43```
 and corresponding seeds 42 to 51. Expect every experiment to take several hours per seed.
