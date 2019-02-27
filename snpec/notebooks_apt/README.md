@@ -8,7 +8,7 @@ For a description of how to reproduce the results from the SNL package, see the 
 
 Notebooks in this folder can be used to reproduce delfi-generated results of the APT submission. 
 
-To generate figures, run notebooks ICML_figure_XY.ipynb. These load results from disk that were produced by the model-fitting and model-evaluating notebooks (saved in the notebooks_apt/results/ subfolder)
+To generate figures, run notebooks ICML_figure_XY.ipynb. These load results from disk (under notebooks_apt/results/) that were produced by the model-fitting and model-evaluating notebooks.
 You can also use the _fit.ipynb and _eval.ipynb notebooks to generate more/new results.
 
 Results (except for figure 5, see below) were reproducible with [this commit](https://github.com/mnonnenm/delfi_int/commit/70d5a6701c304287098b0be34f33871fabcf1e4e). 
