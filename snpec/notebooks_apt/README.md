@@ -1,16 +1,19 @@
 # reproducing results of the ICML 2019 'APT' submission 
 
-Notebooks in this folder can be used to reproduce results of the APT submission (but not all, see below). 
+About half of the results and figure panels of the APT submission were produced with the delfi package (Python 3). The rest was produced with a [modified version](https://github.com/mnonnenm/snl) of the SNL package (Python 2). See the panel-by-panel figure breakdown below.
+For a description of how to reproduce the results from the SNL package, see the bottom of this page. 
 
-Results (except for figure 5, see below) were reproducible with [this commit](https://github.com/mnonnenm/delfi_int/commit/70d5a6701c304287098b0be34f33871fabcf1e4e). 
- The state of relevant code for most of the results at submission time was [this commit](https://github.com/mnonnenm/delfi_int/commit/3e55de7b50874f09269326ddc48dcc63d347f58a). 
-Note that code development on APT continued until the last days before the submission, hence there is no single commit that represents the state of the APT code producing all the original results. 
+
+## delfi results
+
+Notebooks in this folder can be used to reproduce delfi-generated results of the APT submission. 
 
 To generate figures, run notebooks ICML_figure_XY.ipynb. These load results from disk that were produced by the model-fitting and model-evaluating notebooks (saved in the notebooks_apt/results/ subfolder)
 You can also use the _fit.ipynb and _eval.ipynb notebooks to generate more/new results.
 
-About half of the results and panels were produced with the delfi package (Python 3). The rest was produced with a [modified version](https://github.com/mnonnenm/snl) of the SNL package (Python 2). See the panel-by-panel breakdown below. For a description of how to reproduce the results from the SNL package, see the bottom of this page. 
-
+Results (except for figure 5, see below) were reproducible with [this commit](https://github.com/mnonnenm/delfi_int/commit/70d5a6701c304287098b0be34f33871fabcf1e4e). 
+The state of relevant code for most of the results at submission time was [this commit](https://github.com/mnonnenm/delfi_int/commit/3e55de7b50874f09269326ddc48dcc63d347f58a). 
+Note that code development on APT continued until the last days before the submission, hence there is no single commit that represents the state of the APT code producing all the original results. 
 
 To reproduce individual figures, proceed as follows:
 - figure 1: [ICML_figure_1.ipynb](https://github.com/mackelab/lfi-experiments/blob/master/snpec/notebooks_apt/ICML_figure_1.ipynb) loads existing results from disk and chooses seeds for each algorithm that looked particularly nice. If running from scratch, just execute [twoMoons_illustration_figure.ipynb](https://github.com/mackelab/lfi-experiments/blob/master/snpec/notebooks_apt/twoMoons_illustration_figure.ipynb)
@@ -36,6 +39,8 @@ Remark: maximum mean discrepancies (MMDs) are stored as the *square* MMDs (see [
 
 ## SNL results
 
+### reproducing fits
+
 The relevant SNL fork is found [here](https://github.com/mnonnenm/snl). See [here](https://github.com/gpapamak/snl/blob/master/README.md) for general usage of the package. SNL requires a Python 2 environment! 
 
 For the results of the APT submission, the main.py file used to run the experiments was [modified](https://github.com/mnonnenm/snl/blob/master/main.py#L50) to pass a user-controlled seed to the experiment runner. Use for instance as in
@@ -47,7 +52,9 @@ For SMC-ABC results on SLCP (panel 2c), additionally execute
 ``` python main.py run exps/gauss_smc.txt43```
 and corresponding seeds 42 to 51. Expect every experiment to take several hours per seed.
 
-For comparing algorithm performances across seeds, use plotting functions to visualize [average distances](https://github.com/mnonnenm/snl/blob/master/plot_results_dist_all_mean_sd.py), [negative log-probabilities](https://github.com/mnonnenm/snl/blob/master/plot_results_lprob_all_mean_sd.py) and [maxmimum mean discrepancies](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py) for all considered algorithms. Each takes two arguments: an experiment specifier (from 'gauss', 'lv' or 'mg1) and a specifier for APT fits. To reproduce final APT submission results, use the specifier "_validationset" for fits running SGD with stopping criterion. 
+### reproducing figures
+
+For comparing algorithm performances across seeds, use separate plotting functions to visualize [average distances](https://github.com/mnonnenm/snl/blob/master/plot_results_dist_all_mean_sd.py), [negative log-probabilities](https://github.com/mnonnenm/snl/blob/master/plot_results_lprob_all_mean_sd.py) and [maxmimum mean discrepancies](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py) for all considered algorithms. Each takes two arguments: an experiment specifier (from 'gauss', 'lv' or 'mg1) and a specifier for APT fits. To reproduce final APT submission results, use the specifier "_validationset" for fits running SGD with stopping criterion. 
 
 To recreate panel 2c, run 
 
@@ -65,4 +72,8 @@ To recreate figure 8, run
 
 ``` python plot_results_lprob_all_mean_sd.py mg1 _validationset ```
 
-These commands will try to load results from disk. If run on experimental results other than the ones used for the original APT submission (e.g. more seeds, new specifiers for APT), make sure the expected files exist (check the [paths](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L450)), or just [out-comment](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L488) lines for non-existent results.
+
+These commands will try to load results from disk. 
+If run on experimental results other than the ones used for the original APT submission (e.g. more seeds, new specifiers for APT), make sure the expected files exist (check respective paths for [SNL](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L94) and [APT](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L450) results), or just out-comment lines for non-existent results as e.g. [here](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py#L488).
+
+When run for the first time on a new set of results, plot_results_ will first compute the respective performance metrics (neg. log-probs, distances, MMDs) and store those under data/results. This includes sampling long MCMC chains for SNL. Subsequent calls will also load performance metric results from disc.
