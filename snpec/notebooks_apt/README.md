@@ -56,7 +56,7 @@ and corresponding seeds 42 to 51. Expect every experiment to take several hours 
 
 ### reproducing figures
 
-For comparing algorithm performances across seeds, use separate plotting functions to visualize [average distances](https://github.com/mnonnenm/snl/blob/master/plot_results_dist_all_mean_sd.py), [negative log-probabilities](https://github.com/mnonnenm/snl/blob/master/plot_results_lprob_all_mean_sd.py) and [maxmimum mean discrepancies](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py) for all considered algorithms. Each takes two arguments: an experiment specifier (from 'gauss', 'lv' or 'mg1) and a specifier for APT fits. To reproduce final APT submission results, use the specifier "_validationset" for fits running SGD with stopping criterion. 
+For comparing algorithm performances across seeds, use separate plotting functions to visualize [average distances](https://github.com/mnonnenm/snl/blob/master/plot_results_dist_all_mean_sd.py), [negative log-probabilities](https://github.com/mnonnenm/snl/blob/master/plot_results_lprob_all_mean_sd.py) and [maxmimum mean discrepancies](https://github.com/mnonnenm/snl/blob/master/plot_results_mmd_all_mean_sd.py) for all considered algorithms. Each takes two arguments: an experiment specifier ('gauss', 'lv' or 'mg1') and a specifier for APT fits. To reproduce final APT submission results, use the specifier "_validationset" for fits running SGD with stopping criterion. 
 
 To recreate panel 2c, run 
 
