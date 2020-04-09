@@ -1,6 +1,8 @@
 import os
+import socket
 
 path1 = os.getcwd()
+hostname = socket.gethostname()
 if 'ga24sot2' in path1:  # michael LRZ account
     dir_path = '/dss/dsshome1/lxc09/ga24sot2/biophysics/in_silico_framework/'
 #     dir_path = '../../in_silico_framework/'
@@ -9,6 +11,12 @@ if 'ga24sot2' in path1:  # michael LRZ account
 elif 'ge57buf2' in path1:  # pedro LRZ account
     dir_path = '/dss/dsshome1/lxc0B/ge57buf2/in_silico_framework/'
     dir_data_path = '/dss/dsshome1/lxc0B/ge57buf2/Data_arco/results/'
+elif hostname == '':  # michael workstation
+    dir_path = ''
+    dir_data_path = ''
+elif hostname == 'nsa3010':  # pedro workstation
+    dir_path = '/home/pedro/repos/in_silico_framework/'
+    dir_data_path = '/home/pedro/Documents/Data_arco/results/'
 else:
     raise ValueError('Unknown hostname {}, add in if-else block'.format(hostname))
 
