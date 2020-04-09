@@ -1,6 +1,6 @@
 import sys
 
-dir_path = '/dss/dsshome1/lxc09/ga24sot2/in_silico_framework/'
+dir_path = '/dss/dsshome1/lxc09/ga24sot2/biophysics/in_silico_framework/'
 sys.path.append(dir_path)
 import Interface as I
 
