@@ -214,5 +214,6 @@ def convert_np_to_series(x):
 
     return I.pd.Series(dict)
 
-simulator_wrapper(obs_params())
+output_trace = simulator_wrapper(obs_params())
 print('===== Successfully finished =====')
+print('===== Trace:   ', output_trace)
