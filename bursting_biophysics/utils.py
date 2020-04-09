@@ -13,6 +13,7 @@ import numpy as np
 from biophysics_fitting import hay_complete_default_setup, L5tt_parameter_setup
 from parameter_setup import (load_param_names, load_ground_truth_params,
                             load_prior_min, load_prior_max)
+from scipy import stats as spstats
 
 def obs_params():
     """Parameters for x_o
@@ -166,7 +167,7 @@ def simulator_wrapper(new_params, seed=None):
     return voltage_traces
 
 
-def summary_stats():
+def summary_stats(x, n_xcorr=0, n_mom=4):
     """Summary statistics
 
     Parameters
@@ -178,7 +179,99 @@ def summary_stats():
     stats : array
     """
 
-    return
+    protocols = x.keys()    
+    t_on = 295
+
+    sum_stats = []    
+    for protocol_name in protocols:
+        for i in range(np.shape(x[protocol_name]['vList'])[0]):
+            if i == 1:
+                # soma
+                threshold = -10
+            else:
+                # dendrite
+                threshold = -40
+
+            if protocol_name == 'BAC.hay_measure':               
+                t_off = t_on + 45
+                spike_delay = 0.5
+            elif protocol_name == 'bAP.hay_measure':
+                t_off = t_on + 5
+                spike_delay = 1.
+
+            # prepare trace data
+            trace = {}
+            trace['T'] = x[protocol_name]['tVec']
+            trace['V'] = x[protocol_name]['vList'][i]
+
+            # calculate summary statistics
+            sum_stats1 = stats_calc(trace, t_on, t_off, n_xcorr, n_mom, threshold, spike_delay)
+            sum_stats.append(sum_stats1)
+
+    stats = np.concatenate(sum_stats).ravel()
+
+    return np.asarray(stats)
+
+
+def stats_calc(trace, t_on, t_off, n_xcorr, n_mom, threshold, spike_delay):
+    """Calculates summary statistics
+    Parameters
+    ----------
+    trace : dictionary
+    Returns
+    -------
+    np.array, 1d with dimension n_mom+n_xcorr+3
+    """
+    t = trace['T']
+    x = trace['V']
+
+    # initialise array of spike counts
+    v = np.array(x)
+    
+    # put everything to threshold that is below threshold or has negative slope
+    ind = np.where(v < threshold)
+    v[ind] = threshold
+    ind = np.where(np.diff(v) < 0)
+    v[ind] = threshold
+
+    # remaining negative slopes are at spike peaks
+    ind = np.where(np.diff(v) < 0)
+    spike_times = np.array(t)[ind]
+    spike_times_stim = spike_times[(spike_times > t_on) & (spike_times < t_off)]
+
+    # number of spikes
+    if spike_times_stim.shape[0] > 0:
+        spike_times_stim = spike_times_stim[np.append(2*spike_delay, np.diff(spike_times_stim))>spike_delay]
+
+    # resting potential and std
+    rest_pot = np.mean(x[t<t_on])
+    rest_pot_std = np.std(x[(t > .9*t_on) & (t < t_on)])
+
+    # auto-correlations
+    x_on_off = x[(t > t_on) & (t < t_off)]-np.mean(x[(t > t_on) & (t < t_off)])
+    x_corr_val = np.dot(x_on_off,x_on_off)
+
+    xcorr_steps = np.linspace(1.,n_xcorr*1.,n_xcorr).astype(int)
+    x_corr_full = np.zeros(n_xcorr)
+    for ii in range(n_xcorr):
+        x_on_off_part = np.concatenate((x_on_off[xcorr_steps[ii]:],np.zeros(xcorr_steps[ii])))
+        x_corr_full[ii] = np.dot(x_on_off,x_on_off_part)
+
+    x_corr1 = x_corr_full/x_corr_val
+
+    std_pw = np.power(np.std(x[(t > t_on) & (t < t_off)]), np.linspace(3,n_mom,n_mom-2))
+    std_pw = np.concatenate((np.ones(1),std_pw))
+    moments = spstats.moment(x[(t > t_on) & (t < t_off)], np.linspace(2,n_mom,n_mom-1))/std_pw
+
+    # concatenation of summary statistics
+    stats = np.concatenate((
+            np.array([spike_times_stim.shape[0]]),
+            x_corr1,
+            np.array([rest_pot,rest_pot_std,np.mean(x[(t > t_on) & (t < t_off)])]),
+            moments
+        ))
+       
+    return np.asarray(stats)
 
 
 def prior_around_gt(gt, fraction_of_full_prior, num_samples):
