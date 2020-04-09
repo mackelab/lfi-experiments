@@ -1,11 +1,18 @@
-import sys
+import os
 
-# Michael's path
-#dir_path = '/dss/dsshome1/lxc09/ga24sot2/biophysics/in_silico_framework/'
-# Pedro's path
-#dir_path = '$HOME/in_silico_framework/'
-# relative path
-dir_path = '../../in_silico_framework/'
+path1 = os.getcwd()
+if 'ga24sot2' in path1:  # michael LRZ account
+    dir_path = '/dss/dsshome1/lxc09/ga24sot2/biophysics/in_silico_framework/'
+#     dir_path = '../../in_silico_framework/'
+    dir_data_path = '/dss/dsshome1/lxc09/ga24sot2/biophysics/Data_arco/results/'
+#     dir_data_path = '../../Data_arco/results/'
+elif 'ge57buf2' in path1:  # pedro LRZ account
+    dir_path = '/dss/dsshome1/lxc0B/ge57buf2/in_silico_framework/'
+    dir_data_path = '/dss/dsshome1/lxc0B/ge57buf2/Data_arco/results/'
+else:
+    raise ValueError('Unknown hostname {}, add in if-else block'.format(hostname))
+
+import sys
 sys.path.append(dir_path)
 import Interface as I
 import numpy as np
@@ -41,13 +48,8 @@ def simulator_wrapper(new_params, seed=None):
     -------
     voltage_traces : dictionary
     """
-
-    # Michaels path:
-    #mdb = I.ModelDataBase('/dss/dsshome1/lxc09/ga24sot2/biopysics/Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
-    # Pedro's path:
-    #mdb = I.ModelDataBase('$HOME/Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
-    # relative path:
-    mdb = I.ModelDataBase('../../Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
+    
+    mdb = I.ModelDataBase(dir_data_path+'20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
 
     def get_template():
         param = L5tt_parameter_setup.get_L5tt_template()
