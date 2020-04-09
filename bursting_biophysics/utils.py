@@ -1,14 +1,22 @@
 import sys
 
-dir_path = '/dss/dsshome1/lxc09/ga24sot2/biophysics/in_silico_framework/'
+# Michael's path
+#dir_path = '/dss/dsshome1/lxc09/ga24sot2/biophysics/in_silico_framework/'
+# Pedro's path
+#dir_path = '$HOME/in_silico_framework/'
+# relative path
+dir_path = '../../in_silico_framework/'
 sys.path.append(dir_path)
 import Interface as I
+import numpy as np
 
 from biophysics_fitting import hay_complete_default_setup, L5tt_parameter_setup
-
+from parameter_setup import (load_param_names, load_ground_truth_params,
+                            load_prior_min, load_prior_max)
 
 def obs_params():
     """Parameters for x_o
+    Deprecated. Can be removed.
 
     Returns
     -------
@@ -53,6 +61,19 @@ def obs_params():
 
     return true_params
 
+def get_params(parameter_set):
+    """
+    Given a numpy array or list parameter_set, this returns the dictionary
+    containing parameters.
+    """
+
+    keys = load_param_names()
+
+    theta = {}
+    for key, param in zip(keys, parameter_set):
+        theta[key] = param
+
+    return theta
 
 def simulator_wrapper(new_params, seed=None):
     """Wrapper for Arco's simulator from https://github.com/abast/in_silico_framework
@@ -66,9 +87,12 @@ def simulator_wrapper(new_params, seed=None):
     voltage_traces : dictionary
     """
 
-
-    mdb = I.ModelDataBase('/dss/dsshome1/lxc09/ga24sot2/biopysics/Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
-
+    # Michaels path:
+    #mdb = I.ModelDataBase('/dss/dsshome1/lxc09/ga24sot2/biopysics/Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
+    # Pedro's path:
+    #mdb = I.ModelDataBase('$HOME/Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
+    # relative path:
+    mdb = I.ModelDataBase('../../Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
 
     def get_template():
         param = L5tt_parameter_setup.get_L5tt_template()
@@ -106,17 +130,14 @@ def simulator_wrapper(new_params, seed=None):
         s.setup.cell_param_modify_funs.append(('scale_apical', scale_apical))
         return s
 
-
     # morphology 91
     if not '91' in mdb.keys():
         mdb.create_sub_mdb('91')
-
 
     if not 'morphology' in mdb['91'].keys():
         mdb['91'].create_managed_folder('morphology')
 
     I.shutil.copy(dir_path+'MOEA_EH_model_visualization/morphology/CDK_morphologies_from_daniel/91_L5_CDK20050815_nr8L5B_dend_PC_neuron_transform_registered_C2.hoc', mdb['91']['morphology'].join('91_L5_CDK20050815_nr8L5B_dend_PC_neuron_transform_registered_C2.hoc'))
-
 
     mdb['91']['fixed_params'] = {'BAC.hay_measure.recSite': 734,
         'BAC.stim.dist': 734,
@@ -139,7 +160,6 @@ def simulator_wrapper(new_params, seed=None):
 
     s = mdb['91']['get_Simulator'](mdb['91'])
 
-
     with I.silence_stdout:
         voltage_traces = s.run(I.pd.Series(new_params))
 
@@ -161,8 +181,42 @@ def summary_stats():
     return
 
 
+def prior_around_gt(gt, fraction_of_full_prior, num_samples):
+    """
+    Returns samples from a uniform prior around the np.array gt
+    fraction_of_full_prior: float, what fraction of Arco's prior to use
+
+    Note that, if gt is not exactlyt the mean of lower and upper bound, then
+    fraction_of_full_prior will not be exaxtly the fraction of Arco's prior.
+    Instead, one side will be capped by Arco's max (or min) value and the new
+    prior will only extend in the other direction by fraction_of_full_prior/2
+
+    returns: samples from new prior
+    """
+
+    # load Arco's prior bounds
+    prior_min = np.asarray(load_prior_min())
+    prior_max = np.asarray(load_prior_max())
+
+    # get the width of the new prior
+    prior_range = (prior_max - prior_min) * fraction_of_full_prior
+
+    # find new prior bounds
+    lower_bound = np.maximum(gt - prior_range / 2, prior_min)
+    upper_bound = np.minimum(gt + prior_range / 2, prior_max)
+
+    # build numpy distribution
+    samples = np.random.rand(num_samples, len(prior_min)) *\
+                (upper_bound - lower_bound) + lower_bound
+
+    return samples
+
+
 def prior(true_params,seed=None):
-    """Prior"""
+    """
+    Prior.
+    Deprecated. Can be removed.
+    """
     range_lower = np.array([.5,1e-4,1e-4,1e-4,50.,40.,1e-4,35.])
     range_upper = np.array([80.,15.,.6,.6,3000.,90.,.15,100.])
 
@@ -173,7 +227,10 @@ def prior(true_params,seed=None):
 
 
 def convert_np_to_series(x):
-    """Function to convert numpy to pandas"""
+    """
+    Function to convert numpy to pandas.
+    Deprecated. Can be removed.
+    """
     index = ['ephys.CaDynamics_E2.apic.decay',
      'ephys.CaDynamics_E2.apic.gamma',
      'ephys.CaDynamics_E2.axon.decay',
@@ -214,6 +271,14 @@ def convert_np_to_series(x):
 
     return I.pd.Series(dict)
 
-output_trace = simulator_wrapper(obs_params())
-print('===== Successfully finished =====')
-print('===== Trace:   ', output_trace)
+# load ground truth parameters that Arco gave us
+gt = load_ground_truth_params()
+# draw samples from prior around ground truth
+parameter_sets = prior_around_gt(gt, fraction_of_full_prior=0.1, num_samples=2)
+
+for parameter_set in parameter_sets:
+    # build dictionary
+    theta = get_params(parameter_set)
+    # simulate
+    output_trace = simulator_wrapper(theta)
+    print('===== Successfully finished =====')
