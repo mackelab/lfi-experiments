@@ -213,3 +213,6 @@ def convert_np_to_series(x):
     dict = {i: xx for i, xx in zip(index, x)}
 
     return I.pd.Series(dict)
+
+simulator_wrapper(obs_params())
+print('===== Successfully finished =====')
