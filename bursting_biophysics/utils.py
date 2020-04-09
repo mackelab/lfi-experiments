@@ -9,12 +9,12 @@ from biophysics_fitting import hay_complete_default_setup, L5tt_parameter_setup
 
 def obs_params():
     """Parameters for x_o
-    
+
     Returns
     -------
     true_params : dictionary of labels and floats
     """
-    
+
     true_params = {'ephys.CaDynamics_E2.apic.decay': 137.86213603423801,
                      'ephys.CaDynamics_E2.apic.gamma': 0.0005793520824526776,
                      'ephys.CaDynamics_E2.axon.decay': 199.12980481497891,
@@ -54,9 +54,9 @@ def obs_params():
     return true_params
 
 
-def simulator_wrapper(new_params,seed=None):
+def simulator_wrapper(new_params, seed=None):
     """Wrapper for Arco's simulator from https://github.com/abast/in_silico_framework
-    
+
     Parameters
     ----------
     new_params : dictionary
@@ -82,7 +82,7 @@ def simulator_wrapper(new_params,seed=None):
         return param
 
 
-    # params: a pandas dataframe with the parameternames as index and the columns min_ and max_ 
+    # params: a pandas dataframe with the parameternames as index and the columns min_ and max_
     # specifying the parameter boundaries
     params = hay_complete_default_setup.get_feasible_model_params().drop('x', axis = 1)
     params.index = 'ephys.' + params.index
@@ -114,7 +114,7 @@ def simulator_wrapper(new_params,seed=None):
 
     if not 'morphology' in mdb['91'].keys():
         mdb['91'].create_managed_folder('morphology')
-        
+
     I.shutil.copy(dir_path+'MOEA_EH_model_visualization/morphology/CDK_morphologies_from_daniel/91_L5_CDK20050815_nr8L5B_dend_PC_neuron_transform_registered_C2.hoc', mdb['91']['morphology'].join('91_L5_CDK20050815_nr8L5B_dend_PC_neuron_transform_registered_C2.hoc'))
 
 
@@ -142,13 +142,13 @@ def simulator_wrapper(new_params,seed=None):
 
     with I.silence_stdout:
         voltage_traces = s.run(I.pd.Series(new_params))
-        
+
     return voltage_traces
 
 
 def summary_stats():
     """Summary statistics
-    
+
     Parameters
     ----------
     x : dictionary
@@ -157,7 +157,7 @@ def summary_stats():
     -------
     stats : array
     """
-    
+
     return
 
 
@@ -168,7 +168,7 @@ def prior(true_params,seed=None):
 
     prior_min = range_lower
     prior_max = range_upper
-    
+
     return dd.Uniform(lower=prior_min, upper=prior_max, seed=seed)
 
 
@@ -209,7 +209,7 @@ def convert_np_to_series(x):
      'ephys.none.dend.g_pas',
      'ephys.none.soma.g_pas',
      'scale_apical.scale'] # this is an extension to the published version
-    
+
     dict = {i: xx for i, xx in zip(index, x)}
-    
+
     return I.pd.Series(dict)
