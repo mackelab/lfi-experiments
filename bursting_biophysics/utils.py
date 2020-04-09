@@ -1,6 +1,6 @@
 import sys
 
-dir_path = '$HOME/in_silico_framework/'
+dir_path = '/dss/dsshome1/lxc09/ga24sot2/in_silico_framework/'
 sys.path.append(dir_path)
 import Interface as I
 
@@ -67,7 +67,7 @@ def simulator_wrapper(new_params, seed=None):
     """
 
 
-    mdb = I.ModelDataBase('$HOME/Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
+    mdb = I.ModelDataBase('/dss/dsshome1/lxc09/ga24sot2/biopysics/Data_arco/results/20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
 
 
     def get_template():
