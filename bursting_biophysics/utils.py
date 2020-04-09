@@ -15,52 +15,6 @@ from parameter_setup import (load_param_names, load_ground_truth_params,
                             load_prior_min, load_prior_max)
 from scipy import stats as spstats
 
-def obs_params():
-    """Parameters for x_o
-    Deprecated. Can be removed.
-
-    Returns
-    -------
-    true_params : dictionary of labels and floats
-    """
-
-    true_params = {'ephys.CaDynamics_E2.apic.decay': 137.86213603423801,
-                     'ephys.CaDynamics_E2.apic.gamma': 0.0005793520824526776,
-                     'ephys.CaDynamics_E2.axon.decay': 199.12980481497891,
-                     'ephys.CaDynamics_E2.axon.gamma': 0.00061080490759830625,
-                     'ephys.CaDynamics_E2.soma.decay': 152.16474193930151,
-                     'ephys.CaDynamics_E2.soma.gamma': 0.0074243065368466803,
-                     'ephys.Ca_HVA.apic.gCa_HVAbar': 0.0010965218089651857,
-                     'ephys.Ca_HVA.axon.gCa_HVAbar': 0.00081867706020657862,
-                     'ephys.Ca_HVA.soma.gCa_HVAbar': 0.00011435310571497434,
-                     'ephys.Ca_LVAst.apic.gCa_LVAstbar': 0.0022763084379226854,
-                     'ephys.Ca_LVAst.axon.gCa_LVAstbar': 0.0036986082079423594,
-                     'ephys.Ca_LVAst.soma.gCa_LVAstbar': 0.00013883334761566004,
-                     'ephys.Im.apic.gImbar': 3.2474860530531394e-06,
-                     'ephys.K_Pst.axon.gK_Pstbar': 0.0054268374162654382,
-                     'ephys.K_Pst.soma.gK_Pstbar': 0.10568666421909532,
-                     'ephys.K_Tst.axon.gK_Tstbar': 0.048126766921039982,
-                     'ephys.K_Tst.soma.gK_Tstbar': 0.094826660872338001,
-                     'ephys.NaTa_t.apic.gNaTa_tbar': 0.013854989311151315,
-                     'ephys.NaTa_t.axon.gNaTa_tbar': 3.9010342040060975,
-                     'ephys.NaTa_t.soma.gNaTa_tbar': 3.8851157748263354,
-                     'ephys.Nap_Et2.axon.gNap_Et2bar': 0.009964343408409574,
-                     'ephys.Nap_Et2.soma.gNap_Et2bar': 0.0060004974488750964,
-                     'ephys.SK_E2.apic.gSK_E2bar': 0.0012602755616811401,
-                     'ephys.SK_E2.axon.gSK_E2bar': 0.013922406480998821,
-                     'ephys.SK_E2.soma.gSK_E2bar': 0.062837104215625134,
-                     'ephys.SKv3_1.apic.gSKv3_1bar': 6.6838213839617901e-05,
-                     'ephys.SKv3_1.apic.offset': 0.08311048073340864,
-                     'ephys.SKv3_1.apic.slope': -2.9836949894223825,
-                     'ephys.SKv3_1.axon.gSKv3_1bar': 1.9642986130169147,
-                     'ephys.SKv3_1.soma.gSKv3_1bar': 1.2999358521956366,
-                     'ephys.none.apic.g_pas': 4.4931548434199036e-05,
-                     'ephys.none.axon.g_pas': 2.062212836678345e-05,
-                     'ephys.none.dend.g_pas': 4.2205984329741197e-05,
-                     'ephys.none.soma.g_pas': 2.2409802171891654e-05,
-                     'scale_apical.scale': 1.7109080877160283}
-
-    return true_params
 
 def get_params(parameter_set):
     """
@@ -304,65 +258,6 @@ def prior_around_gt(gt, fraction_of_full_prior, num_samples):
 
     return samples
 
-
-def prior(true_params,seed=None):
-    """
-    Prior.
-    Deprecated. Can be removed.
-    """
-    range_lower = np.array([.5,1e-4,1e-4,1e-4,50.,40.,1e-4,35.])
-    range_upper = np.array([80.,15.,.6,.6,3000.,90.,.15,100.])
-
-    prior_min = range_lower
-    prior_max = range_upper
-
-    return dd.Uniform(lower=prior_min, upper=prior_max, seed=seed)
-
-
-def convert_np_to_series(x):
-    """
-    Function to convert numpy to pandas.
-    Deprecated. Can be removed.
-    """
-    index = ['ephys.CaDynamics_E2.apic.decay',
-     'ephys.CaDynamics_E2.apic.gamma',
-     'ephys.CaDynamics_E2.axon.decay',
-     'ephys.CaDynamics_E2.axon.gamma',
-     'ephys.CaDynamics_E2.soma.decay',
-     'ephys.CaDynamics_E2.soma.gamma',
-     'ephys.Ca_HVA.apic.gCa_HVAbar',
-     'ephys.Ca_HVA.axon.gCa_HVAbar',
-     'ephys.Ca_HVA.soma.gCa_HVAbar',
-     'ephys.Ca_LVAst.apic.gCa_LVAstbar',
-     'ephys.Ca_LVAst.axon.gCa_LVAstbar',
-     'ephys.Ca_LVAst.soma.gCa_LVAstbar',
-     'ephys.Im.apic.gImbar',
-     'ephys.K_Pst.axon.gK_Pstbar',
-     'ephys.K_Pst.soma.gK_Pstbar',
-     'ephys.K_Tst.axon.gK_Tstbar',
-     'ephys.K_Tst.soma.gK_Tstbar',
-     'ephys.NaTa_t.apic.gNaTa_tbar',
-     'ephys.NaTa_t.axon.gNaTa_tbar',
-     'ephys.NaTa_t.soma.gNaTa_tbar',
-     'ephys.Nap_Et2.axon.gNap_Et2bar',
-     'ephys.Nap_Et2.soma.gNap_Et2bar',
-     'ephys.SK_E2.apic.gSK_E2bar',
-     'ephys.SK_E2.axon.gSK_E2bar',
-     'ephys.SK_E2.soma.gSK_E2bar',
-     'ephys.SKv3_1.apic.gSKv3_1bar',
-     'ephys.SKv3_1.apic.offset', #new: # potassium channel desnity on apical dendrite can be parameterized in a more complex way. In the paper, it was just constant. Now, it can increase or decrease and have a max oir min
-     'ephys.SKv3_1.apic.slope', #new: # potassium channel desnity on apical dendrite can be parameterized in a more complex way. In the paper, it was just constant. Now, it can increase or decrease and have a max oir min
-     'ephys.SKv3_1.axon.gSKv3_1bar',
-     'ephys.SKv3_1.soma.gSKv3_1bar',
-     'ephys.none.apic.g_pas',
-     'ephys.none.axon.g_pas',
-     'ephys.none.dend.g_pas',
-     'ephys.none.soma.g_pas',
-     'scale_apical.scale'] # this is an extension to the published version
-
-    dict = {i: xx for i, xx in zip(index, x)}
-
-    return I.pd.Series(dict)
 
 # load ground truth parameters that Arco gave us
 gt = load_ground_truth_params()
