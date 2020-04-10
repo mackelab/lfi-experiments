@@ -127,7 +127,15 @@ def simulator_wrapper(new_params, seed=None):
 
     with I.silence_stdout:
         voltage_traces = s.run(I.pd.Series(new_params))
-
+        
+    # add observation noise to voltage traces
+    nois_fact_obs = 0 #1.5
+    protocols = voltage_traces.keys()
+    for protocol_name in protocols:
+        num_tstep = len(voltage_traces[protocol_name]['tVec'])
+        for i in range(np.shape(x[protocol_name]['vList'])[0]):
+            voltage_traces[protocol_name]['vList'][i] = voltage_traces[protocol_name]['vList'][i] + nois_fact_obs*np.random.randn(num_tstep)
+            
     return voltage_traces
 
 
