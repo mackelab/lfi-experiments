@@ -169,7 +169,7 @@ def summary_stats(x, n_xcorr=0, n_mom=4):
                 t_off = t_on + 45
                 spike_delay = 0.5
             elif protocol_name == 'bAP.hay_measure':
-                t_off = t_on + 5
+                t_off = x[protocol_name]['tVec'][-1]
                 spike_delay = 1.
 
             # prepare trace data
