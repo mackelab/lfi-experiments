@@ -166,7 +166,7 @@ def summary_stats(x, n_xcorr=0, n_mom=4):
                 threshold = -40
 
             if protocol_name == 'BAC.hay_measure':               
-                t_off = t_on + 45
+                t_off = t_on + 100
                 spike_delay = 0.5
             elif protocol_name == 'bAP.hay_measure':
                 t_off = x[protocol_name]['tVec'][-1]
