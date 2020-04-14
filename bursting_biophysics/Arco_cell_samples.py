@@ -1,3 +1,5 @@
+from __future__ import division
+
 import multiprocessing
 import multiprocessing.pool
 import numpy as np
@@ -6,7 +8,6 @@ import sys
 import time
 import utils
 
-from __future__ import division
 from parameter_setup import load_ground_truth_params
 
 ################################################################################
