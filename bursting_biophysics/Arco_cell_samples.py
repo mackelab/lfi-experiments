@@ -16,27 +16,6 @@ seed1 = time.time()
 seed = int((seed1 % 1)*1e7)
 rng = np.random.RandomState(seed=seed)
 
-################################################################################
-class NoDaemonProcess(multiprocessing.Process):
-    @property
-    def daemon(self):
-        return False
-
-    @daemon.setter
-    def daemon(self, value):
-        pass
-
-
-class NoDaemonContext(type(multiprocessing.get_context())):
-    Process = NoDaemonProcess
-
-# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
-# because the latter is only a wrapper function, not a proper class.
-class MyPool(multiprocessing.pool.Pool):
-    def __init__(self, *args, **kwargs):
-        kwargs['context'] = NoDaemonContext()
-        super(MyPool, self).__init__(*args, **kwargs)
-
 
 ################################################################################
 # ground-truth parameters
@@ -62,7 +41,7 @@ def sim_f(param):
 
 data = []
 params_seed = np.concatenate((seeds_model.reshape(-1,1),params),axis=1)
-pool = MyPool(n_processes)
+pool = multiprocessing.pool.Pool(n_processes)
 data.append(pool.map(sim_f, params_seed))
 pool.close()
 pool.join()
