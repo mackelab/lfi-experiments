@@ -57,6 +57,8 @@ def simulator_wrapper(new_params, seed=None):
     voltage_traces : dictionary
     """
 
+    new_params = get_params(new_params)
+    
     mdb = I.ModelDataBase(dir_data_path+'20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
 
     def get_template():
