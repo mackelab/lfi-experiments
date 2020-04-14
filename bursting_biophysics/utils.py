@@ -281,14 +281,14 @@ def prior_around_gt(gt, fraction_of_full_prior, num_samples, seed=None):
     return samples
 
 
-# load ground truth parameters that Arco gave us
-gt = load_ground_truth_params()
-# draw samples from prior around ground truth
-parameter_sets = prior_around_gt(gt, fraction_of_full_prior=0.1, num_samples=2)
+# # load ground truth parameters that Arco gave us
+# gt = load_ground_truth_params()
+# # draw samples from prior around ground truth
+# parameter_sets = prior_around_gt(gt, fraction_of_full_prior=0.1, num_samples=2)
 
-for parameter_set in parameter_sets:
-    # build dictionary
-    theta = get_params(parameter_set)
-    # simulate
-    output_trace = simulator_wrapper(theta)
-    print('===== Successfully finished =====')
+# for parameter_set in parameter_sets:
+#     # build dictionary
+#     theta = get_params(parameter_set)
+#     # simulate
+#     output_trace = simulator_wrapper(theta)
+#     print('===== Successfully finished =====')
