@@ -56,7 +56,7 @@ def simulator_wrapper(new_params, seed=None):
     -------
     voltage_traces : dictionary
     """
-    
+
     mdb = I.ModelDataBase(dir_data_path+'20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
 
     def get_template():
@@ -136,7 +136,7 @@ def simulator_wrapper(new_params, seed=None):
         voltage_traces[protocol_name]['vList'] = list(voltage_traces[protocol_name]['vList'])
         for i in range(np.shape(voltage_traces[protocol_name]['vList'])[0]):
             voltage_traces[protocol_name]['vList'][i] = voltage_traces[protocol_name]['vList'][i] + nois_fact_obs*np.random.randn(num_tstep)
-            
+
     return voltage_traces
 
 
@@ -152,10 +152,10 @@ def summary_stats(x, n_xcorr=0, n_mom=4):
     stats : array
     """
 
-    protocols = x.keys()    
+    protocols = x.keys()
     t_on = 295
 
-    sum_stats = []    
+    sum_stats = []
     for protocol_name in protocols:
         for i in range(np.shape(x[protocol_name]['vList'])[0]):
             if i == 1:
@@ -165,7 +165,7 @@ def summary_stats(x, n_xcorr=0, n_mom=4):
                 # dendrite
                 threshold = -40
 
-            if protocol_name == 'BAC.hay_measure':               
+            if protocol_name == 'BAC.hay_measure':
                 t_off = t_on + 100
                 spike_delay = 0.5
             elif protocol_name == 'bAP.hay_measure':
@@ -200,7 +200,7 @@ def stats_calc(trace, t_on, t_off, n_xcorr, n_mom, threshold, spike_delay):
 
     # initialise array of spike counts
     v = np.array(x)
-    
+
     # put everything to threshold that is below threshold or has negative slope
     ind = np.where(v < threshold)
     v[ind] = threshold
@@ -243,11 +243,11 @@ def stats_calc(trace, t_on, t_off, n_xcorr, n_mom, threshold, spike_delay):
             np.array([rest_pot,rest_pot_std,np.mean(x[(t > t_on) & (t < t_off)])]),
             moments
         ))
-       
+
     return np.asarray(stats)
 
 
-def prior_around_gt(gt, fraction_of_full_prior, num_samples):
+def prior_around_gt(gt, fraction_of_full_prior, num_samples, seed=None):
     """
     Returns samples from a uniform prior around the np.array gt
     fraction_of_full_prior: float, what fraction of Arco's prior to use
@@ -270,6 +270,9 @@ def prior_around_gt(gt, fraction_of_full_prior, num_samples):
     # find new prior bounds
     lower_bound = np.maximum(gt - prior_range / 2, prior_min)
     upper_bound = np.minimum(gt + prior_range / 2, prior_max)
+
+    # seed prior
+    np.random.seed(seed)
 
     # build numpy distribution
     samples = np.random.rand(num_samples, len(prior_min)) *\
