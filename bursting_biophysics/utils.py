@@ -11,9 +11,9 @@ if 'ga24sot2' in path1:  # michael LRZ account
 elif 'ge57buf2' in path1:  # pedro LRZ account
     dir_path = '/dss/dsshome1/lxc0B/ge57buf2/in_silico_framework/'
     dir_data_path = '/dss/dsshome1/lxc0B/ge57buf2/Data_arco/results/'
-elif hostname == '':  # michael workstation
-    dir_path = ''
-    dir_data_path = ''
+elif hostname == 'dgkarl':  # michael workstation
+    dir_path = '/home/michael/Documents/in_silico_framework/'
+    dir_data_path = '/home/michael/Documents/Data_arco8/results/'
 elif hostname == 'nsa3010':  # pedro workstation
     dir_path = '/home/pedro/repos/in_silico_framework/'
     dir_data_path = '/home/pedro/Documents/Data_arco/results/'
