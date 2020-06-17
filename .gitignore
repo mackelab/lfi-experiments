@@ -4,6 +4,7 @@ results/*
 model_comparison/data/
 model_comparison/figures/
 balancednetwork/.idea/
+bursting_biophysics/results/cleaned_up_data.npz
 .idea/
 
 # Notebook checkpoints
