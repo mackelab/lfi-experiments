@@ -197,8 +197,11 @@ def stats_calc(trace, t_on, t_off, n_xcorr, n_mom, threshold, spike_delay):
     -------
     np.array, 1d with dimension n_mom+n_xcorr+3
     """
-    t = trace['T']
-    x = trace['V']
+    t_original = trace['T']
+    x_original = trace['V']
+    
+    # interpolate voltage (because numerical solver has adaptive timestep)
+    t, x = np.arange(0,t_original[-1],0.025), np.interp(np.arange(0,t_original[-1],0.025), t_original, x_original)
 
     # initialise array of spike counts
     v = np.array(x)
