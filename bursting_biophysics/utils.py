@@ -45,6 +45,115 @@ def get_params(parameter_set):
 
     return theta
 
+def simulator_ss_wrapper(new_params, seed=None):
+    """Wrapper for Arco's simulator from https://github.com/abast/in_silico_framework
+    Also directly computes the hay summstats
+
+    Parameters
+    ----------
+    new_params : dictionary
+        Parameters for simulation
+    Returns
+    -------
+    voltage_traces : dictionary
+    """
+
+    new_params = get_params(new_params)
+    
+    mdb = I.ModelDataBase(dir_data_path+'20190117_fitting_CDK_morphologies_Kv3_1_slope_variable_dend_scale')
+
+    def get_template():
+        param = L5tt_parameter_setup.get_L5tt_template()
+        param.ApicalDendrite.mechanisms.range.SKv3_1 = I.scp.NTParameterSet({
+                'slope': None,
+                'distance': 'relative',
+                'gSKv3_1bar': None,
+                'offset': None,
+                'spatial': 'linear'})
+        param['cell_modify_functions'] = I.scp.NTParameterSet({'scale_apical': {'scale': None}})
+        return param
+
+
+    # params: a pandas dataframe with the parameternames as index and the columns min_ and max_
+    # specifying the parameter boundaries
+    params = hay_complete_default_setup.get_feasible_model_params().drop('x', axis = 1)
+    params.index = 'ephys.' + params.index
+    params = params.append(I.pd.DataFrame({'ephys.SKv3_1.apic.slope': {'min': -3, 'max': 0},
+                                           'ephys.SKv3_1.apic.offset': {'min': 0, 'max': 1}}).T)
+    params = params.append(I.pd.DataFrame({'min': .333, 'max': 3}, index = ['scale_apical.scale']))
+    params = params.sort_index()
+
+
+    def scale_apical(cell_param, params):
+        assert(len(params) == 1)
+        cell_param.cell_modify_functions.scale_apical.scale = params['scale']
+        return cell_param
+
+
+    from biophysics_fitting.parameters import param_to_kwargs
+    def get_Simulator(mdb_setup, step = False):
+        fixed_params = mdb_setup['get_fixed_params'](mdb_setup)
+        s = hay_complete_default_setup.get_Simulator(I.pd.Series(fixed_params), step = step)
+        s.setup.cell_param_generator = get_template
+        s.setup.cell_param_modify_funs.append(('scale_apical', scale_apical))
+        return s
+
+    # morphology 91
+    if not '91' in mdb.keys():
+        mdb.create_sub_mdb('91')
+
+    if not 'morphology' in mdb['91'].keys():
+        mdb['91'].create_managed_folder('morphology')
+
+    I.shutil.copy(dir_path+'MOEA_EH_model_visualization/morphology/CDK_morphologies_from_daniel/91_L5_CDK20050815_nr8L5B_dend_PC_neuron_transform_registered_C2.hoc', mdb['91']['morphology'].join('91_L5_CDK20050815_nr8L5B_dend_PC_neuron_transform_registered_C2.hoc'))
+
+    mdb['91']['fixed_params'] = {'BAC.hay_measure.recSite': 734,
+        'BAC.stim.dist': 734,
+        'bAP.hay_measure.recSite1':734,
+        'bAP.hay_measure.recSite2':914,
+        'hot_zone.min_': 799,
+        'hot_zone.max_': 999,
+        'morphology.filename': None}
+
+    def get_fixed_params(mdb_setup):
+        fixed_params = mdb_setup['fixed_params']
+        fixed_params['morphology.filename'] = mdb_setup['morphology'].get_file('hoc')
+        return fixed_params
+
+
+    mdb['91']['get_fixed_params'] = get_fixed_params
+    mdb['91'].setitem('params', params, dumper = I.dumper_pandas_to_pickle)
+
+    mdb['91'].setitem('get_Simulator', I.partial(get_Simulator, step = False), dumper = I.dumper_to_cloudpickle)
+
+    s = mdb['91']['get_Simulator'](mdb['91'])
+
+    with I.silence_stdout:
+        voltage_traces = s.run(I.pd.Series(new_params))
+
+    # add observation noise to voltage traces
+    nois_fact_obs = 0 #1.5
+    protocols = voltage_traces.keys()
+    for protocol_name in protocols:
+        num_tstep = len(voltage_traces[protocol_name]['tVec'])
+        voltage_traces[protocol_name]['vList'] = list(voltage_traces[protocol_name]['vList'])
+        for i in range(np.shape(voltage_traces[protocol_name]['vList'])[0]):
+            voltage_traces[protocol_name]['vList'][i] = voltage_traces[protocol_name]['vList'][i] + nois_fact_obs*np.random.randn(num_tstep)
+            
+            
+    ########################
+    ########################
+    ########################
+    ########################
+    summstats = mdb['91']['get_Evaluator'](mdb['91'])
+
+    # compute summary stats
+    stats = summstats.evaluate(voltage_traces)
+    
+    return stats
+
+
+
 def simulator_wrapper(new_params, seed=None):
     """Wrapper for Arco's simulator from https://github.com/abast/in_silico_framework
 
@@ -138,7 +247,7 @@ def simulator_wrapper(new_params, seed=None):
         voltage_traces[protocol_name]['vList'] = list(voltage_traces[protocol_name]['vList'])
         for i in range(np.shape(voltage_traces[protocol_name]['vList'])[0]):
             voltage_traces[protocol_name]['vList'][i] = voltage_traces[protocol_name]['vList'][i] + nois_fact_obs*np.random.randn(num_tstep)
-
+            
     return voltage_traces
 
 
